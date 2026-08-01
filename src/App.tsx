@@ -354,14 +354,7 @@ function Level({ level, showClipping }: { level: LiveLevel; showClipping: boolea
   const meterValue = Math.min(level.rms * METER_GAIN, PERCENT_SCALE);
   return (
     <div className="level">
-      <div
-        className="meter"
-        role="meter"
-        aria-label="Live input level"
-        aria-valuemin={0}
-        aria-valuemax={PERCENT_SCALE}
-        aria-valuenow={Math.round(meterValue)}
-      >
+      <div className="meter" aria-hidden="true">
         <span style={{ "--level": `${meterValue}%` } as React.CSSProperties} />
       </div>
       <span>Input level</span>
