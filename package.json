@@ -1,0 +1,34 @@
+{
+  "name": "sound-check-card",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint .",
+    "format": "oxfmt --check .",
+    "format:write": "oxfmt .",
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "check": "pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "vite": "latest"
+  },
+  "devDependencies": {
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "oxfmt": "latest",
+    "oxlint": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.34.4"
+}
