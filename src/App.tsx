@@ -144,7 +144,7 @@ export function App() {
       </a>
       <header className="masthead">
         <a className="wordmark" href="#/">
-          sound-check-card
+          Sound Check
         </a>
         <a className="quiet-link" href="#/design-system">
           Design system
@@ -451,7 +451,7 @@ function Footer() {
     <footer>
       <span>© {new Date().getFullYear()} Jishnu Teegala</span>
       <a href="https://jishnuteegala.com/privacy">Privacy</a>
-      <a href="https://github.com/jishnuteegala/sound-check-card">Source</a>
+      <a href="https://github.com/jishnuteegala/sound-check">Source</a>
     </footer>
   );
 }
@@ -609,7 +609,7 @@ function DesignSystem() {
       </a>
       <header className="masthead">
         <a className="wordmark" href="#/">
-          sound-check-card
+          Sound Check
         </a>
         <a className="quiet-link" href="#/">
           Back to check

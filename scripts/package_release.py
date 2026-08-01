@@ -32,7 +32,7 @@ output.mkdir(parents=True)
 dist = source / "dist"
 shutil.copy2(source / "LICENSE", dist / "LICENSE")
 
-zip_path = output / f"sound-check-card-{version}.zip"
+zip_path = output / f"sound-check-{version}.zip"
 with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
     for path in files_under(dist):
         info = zipfile.ZipInfo(path.relative_to(dist).as_posix(), zip_time)
@@ -40,7 +40,7 @@ with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as ar
         info.external_attr = 0o100644 << 16
         archive.writestr(info, path.read_bytes())
 
-tar_path = output / f"sound-check-card-{version}.tar.gz"
+tar_path = output / f"sound-check-{version}.tar.gz"
 with tar_path.open("wb") as raw:
     with gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=epoch, compresslevel=9) as compressed:
         with tarfile.open(fileobj=compressed, mode="w") as archive:

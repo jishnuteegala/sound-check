@@ -1,6 +1,6 @@
 # Issue tracker
 
-Issues for this repo live in **GitHub Issues** (https://github.com/jishnuteegala/sound-check-card/issues), managed via the `gh` CLI.
+Issues for this repo live in **GitHub Issues** (https://github.com/jishnuteegala/sound-check/issues), managed via the `gh` CLI.
 
 Chosen at factory setup (2026-08-01): established GitHub repo, long-running multi-session factory effort, native `Closes #N` clearing and blocking relationships wanted.
 
