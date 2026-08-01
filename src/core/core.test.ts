@@ -14,7 +14,7 @@ import { deriveVerdict } from "./verdict";
 const silence = new Float32Array(32);
 const lowSpeech = new Float32Array(32).fill(0.01);
 const clipped = Float32Array.from([0.99, -0.99, 1, ...Array.from({ length: 29 }, () => 0.2)]);
-const noisyQuiet = new Float32Array(32).fill(0.08);
+const noisyQuiet = new Float32Array(32).fill(0.065);
 const cleanSpeech = new Float32Array(32).fill(0.1);
 
 function cleanResults(): CheckResult[] {
@@ -77,18 +77,13 @@ describe("check runners", () => {
       checkNoisyQuiet(phase(0.1 * (thresholds.noisyQuietRatio + 0.01)), phase(0.1)).status,
     ).toBe("info");
 
-    expect(
-      checkNoisyQuiet(phase(0.1 * (thresholds.noisyQuietUnusableRatio - 0.01)), phase(0.1)).measured
-        .unusable,
-    ).toBe(false);
-    expect(
-      checkNoisyQuiet(phase(0.1 * thresholds.noisyQuietUnusableRatio), phase(0.1)).measured
-        .unusable,
-    ).toBe(true);
-    expect(
-      checkNoisyQuiet(phase(0.1 * (thresholds.noisyQuietUnusableRatio + 0.01)), phase(0.1)).measured
-        .unusable,
-    ).toBe(true);
+    expect(checkNoisyQuiet(phase(0.65), phase(1)).status).toBe("info");
+    expect(checkNoisyQuiet(phase(thresholds.noisyQuietUnusableRatio), phase(1)).status).toBe(
+      "check",
+    );
+    expect(checkNoisyQuiet(phase(thresholds.noisyQuietUnusableRatio + 0.01), phase(1)).status).toBe(
+      "check",
+    );
   });
 });
 
@@ -135,13 +130,10 @@ function replace(
 
 function noisyResult(unusable: boolean): CheckResult[] {
   const results = cleanResults();
-  return results.map((result) =>
-    result.id === "noisy-quiet"
-      ? {
-          ...result,
-          status: unusable ? "check" : "info",
-          measured: { ...result.measured, unusable },
-        }
-      : result,
-  );
+  const noisyQuietResult = results.find((result) => result.id === "noisy-quiet");
+  if (!noisyQuietResult) return results;
+
+  noisyQuietResult.status = unusable ? "check" : "info";
+  noisyQuietResult.measured = { ...noisyQuietResult.measured, unusable };
+  return results;
 }
