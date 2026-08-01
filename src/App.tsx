@@ -18,6 +18,21 @@ import {
   type FlowEvent,
   type FlowState,
 } from "./flow";
+import {
+  colorTokens,
+  controlTokens,
+  fontTokens,
+  layeringTokens,
+  layoutTokens,
+  leadingTokens,
+  motionTokens,
+  radiusTokens,
+  shadowTokens,
+  spaceTokens,
+  textTokens,
+  trackingTokens,
+  weightTokens,
+} from "./tokens";
 import "./styles.css";
 
 const fakeScenario = import.meta.env.DEV ? new URLSearchParams(location.search).get("fake") : null;
@@ -441,7 +456,152 @@ function Footer() {
   );
 }
 
+function useTokenValues(): (token: string) => string {
+  const [root, setRoot] = useState<CSSStyleDeclaration>();
+  useEffect(() => {
+    setRoot(getComputedStyle(document.documentElement));
+  }, []);
+  return (token) => root?.getPropertyValue(token).trim() ?? "";
+}
+
+function TokenValue({ read, token }: { read: (token: string) => string; token: string }) {
+  return (
+    <span className="ds-token">
+      <code>{token}</code>
+      <span className="ds-value">{read(token) || "—"}</span>
+    </span>
+  );
+}
+
+function ColourGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-grid">
+      {colorTokens.map((token) => (
+        <span key={token} className="swatch">
+          <span className="swatch-chip" style={{ background: `var(${token})` }} />
+          <TokenValue read={read} token={token} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function SpaceGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-scale">
+      {spaceTokens.map((token) => (
+        <div key={token} className="ds-ruler">
+          <span style={{ width: `var(${token})` }} />
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TypeGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-type">
+      {textTokens.map((token) => (
+        <div key={token} className="ds-type-row">
+          <span style={{ fontSize: `var(${token})`, lineHeight: "var(--leading-tight)" }}>
+            Speak normally
+          </span>
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LeadingGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-type">
+      {leadingTokens.map((token) => (
+        <div key={token} className="ds-type-row">
+          <p style={{ lineHeight: `var(${token})`, margin: 0, maxWidth: "var(--measure-lede)" }}>
+            One practical check for input, speaking level, clipping, and room noise before your
+            call.
+          </p>
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WeightGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-type">
+      {weightTokens.map((token) => (
+        <div key={token} className="ds-type-row">
+          <span style={{ fontWeight: `var(${token})`, fontSize: "var(--text-lg)" }}>
+            Know your microphone
+          </span>
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrackingGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-type">
+      {trackingTokens.map((token) => (
+        <div key={token} className="ds-type-row">
+          <span
+            style={{
+              letterSpacing: `var(${token})`,
+              textTransform: "uppercase",
+              fontWeight: "var(--weight-semibold)",
+            }}
+          >
+            Supporting evidence
+          </span>
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RadiiGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-radii">
+      {radiusTokens.map((token) => (
+        <span key={token} style={{ borderRadius: `var(${token})` }}>
+          <TokenValue read={read} token={token} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ShadowGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-row">
+      {shadowTokens.map((token) => (
+        <span key={token} className="ds-shadow" style={{ boxShadow: `var(${token})` }}>
+          <TokenValue read={read} token={token} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ValueList({ read, tokens }: { read: (token: string) => string; tokens: string[] }) {
+  return (
+    <div className="ds-list">
+      {tokens.map((token) => (
+        <TokenValue key={token} read={read} token={token} />
+      ))}
+    </div>
+  );
+}
+
 function DesignSystem() {
+  const read = useTokenValues();
   return (
     <div className="site-shell">
       <a className="skip-link" href="#tokens">
@@ -451,78 +611,67 @@ function DesignSystem() {
         <a className="wordmark" href="#/">
           sound-check-card
         </a>
+        <a className="quiet-link" href="#/">
+          Back to check
+        </a>
       </header>
       <main id="tokens" className="design-system">
         <h1>Design system</h1>
         <p className="lede">
-          Every value on this site flows from the tokens below. Nothing is set by hand.
+          Every value on this site flows from the tokens below, listed from a single typed source so
+          the gallery cannot drift. Nothing is set by hand.
         </p>
         <section className="ds-section">
           <h2>Colour</h2>
-          <div className="ds-grid">
-            <span className="swatch canvas">
-              Canvas<code>--canvas</code>
-            </span>
-            <span className="swatch surface">
-              Surface<code>--surface</code>
-            </span>
-            <span className="swatch ink">
-              Ink<code>--ink</code>
-            </span>
-            <span className="swatch muted">
-              Muted<code>--muted</code>
-            </span>
-            <span className="swatch accent">
-              Accent<code>--accent</code>
-            </span>
-            <span className="swatch check">
-              Check<code>--check</code>
-            </span>
-            <span className="swatch pass-bg">
-              Pass<code>--pass-bg</code>
-            </span>
-            <span className="swatch check-bg">
-              Check bg<code>--check-bg</code>
-            </span>
-            <span className="swatch meter-track">
-              Meter<code>--meter-track</code>
-            </span>
-            <span className="swatch focus">
-              Focus<code>--focus</code>
-            </span>
-          </div>
-        </section>
-        <section className="ds-section">
-          <h2>Type scale</h2>
-          <div className="ds-type">
-            <h1>Display · --text-3xl</h1>
-            <h2>Heading · --text-xl</h2>
-            <h3>Subheading · --text-base</h3>
-            <p>Body copy · --text-base sits at a calm, readable measure for instructions.</p>
-            <p className="step">Label · --text-xs uppercase</p>
-          </div>
+          <ColourGroup read={read} />
         </section>
         <section className="ds-section">
           <h2>Spacing scale</h2>
-          <div className="ds-scale">
-            {["--space-1", "--space-2", "--space-3", "--space-4", "--space-5", "--space-6"].map(
-              (token) => (
-                <div key={token} className="ds-ruler">
-                  <span style={{ width: `var(${token})` }} />
-                  <code>{token}</code>
-                </div>
-              ),
-            )}
-          </div>
+          <SpaceGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Type scale</h2>
+          <TypeGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Line height</h2>
+          <LeadingGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Font weight</h2>
+          <WeightGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Tracking</h2>
+          <TrackingGroup read={read} />
         </section>
         <section className="ds-section">
           <h2>Radii</h2>
-          <div className="ds-radii">
-            <span style={{ borderRadius: "var(--radius-sm)" }}>sm</span>
-            <span style={{ borderRadius: "var(--radius)" }}>base</span>
-            <span style={{ borderRadius: "var(--radius-lg)" }}>lg</span>
-            <span style={{ borderRadius: "var(--radius-pill)" }}>pill</span>
-          </div>
+          <RadiiGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Shadow</h2>
+          <ShadowGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Controls &amp; states</h2>
+          <ValueList read={read} tokens={controlTokens} />
+        </section>
+        <section className="ds-section">
+          <h2>Motion</h2>
+          <ValueList read={read} tokens={motionTokens} />
+        </section>
+        <section className="ds-section">
+          <h2>Layout</h2>
+          <ValueList read={read} tokens={layoutTokens} />
+        </section>
+        <section className="ds-section">
+          <h2>Layering</h2>
+          <ValueList read={read} tokens={layeringTokens} />
+        </section>
+        <section className="ds-section">
+          <h2>Font</h2>
+          <ValueList read={read} tokens={fontTokens} />
         </section>
         <section className="ds-section">
           <h2>Buttons</h2>
@@ -539,10 +688,43 @@ function DesignSystem() {
           </div>
         </section>
         <section className="ds-section">
+          <h2>Field &amp; select</h2>
+          <label className="field">
+            Microphone
+            <select defaultValue="builtin">
+              <option value="builtin">Built-in Microphone</option>
+              <option value="usb">Yeti USB Microphone</option>
+            </select>
+          </label>
+        </section>
+        <section className="ds-section">
           <h2>Status</h2>
           <div className="ds-row">
             <span className="status pass">PASS</span>
             <span className="status check">CHECK</span>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Notice &amp; error</h2>
+          <p className="notice">
+            Meeting apps may process audio differently. This check reports whether your browser
+            could turn off its own input processing.
+          </p>
+          <p className="error" role="alert">
+            Playback capture could not start.
+          </p>
+        </section>
+        <section className="ds-section">
+          <h2>Disclaimer &amp; retention</h2>
+          <div className="intro-notes">
+            <aside className="disclaimer">
+              <strong>Before your meeting:</strong> a PASS here cannot guarantee Zoom, Meet, or
+              Teams. Those apps may apply their own processing.
+            </aside>
+            <p className="retention">
+              <strong>Zero retention.</strong> Audio stays in this browser and is never uploaded or
+              saved.
+            </p>
           </div>
         </section>
         <section className="ds-section">
@@ -560,10 +742,51 @@ function DesignSystem() {
           </div>
         </section>
         <section className="ds-section">
+          <h2>Panel</h2>
+          <div className="check-panel">
+            <p className="step">Step 3 of 3 · Speaking phase</p>
+            <h2>Speak normally</h2>
+            <p>Talk at the level you expect to use in the call.</p>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Blocked &amp; pending states</h2>
+          <div className="ds-states">
+            <div className="check-panel">
+              <p className="step">Step 1 of 3</p>
+              <h2>Allow microphone access</h2>
+              <p>Choose “Allow” in your browser prompt. We will show available inputs next.</p>
+            </div>
+            <div className="check-panel">
+              <h2>We could not access your microphone.</h2>
+              <p>Re-enable it from this site’s permissions in your browser settings, then retry.</p>
+            </div>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Playback controls</h2>
+          <div className="playback">
+            <p>
+              Optional: make a local recording of up to 10 seconds to hear this input. It stays in
+              memory only.
+            </p>
+            <button className="button secondary" type="button">
+              Record up to 10 seconds
+            </button>
+          </div>
+        </section>
+        <section className="ds-section">
           <h2>Level meter</h2>
           <div className="evidence">
             <span className="evidence-label">Supporting evidence</span>
             <Level level={{ rms: 0.09, peak: 0.4, clipping: false }} showClipping />
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Clipping active</h2>
+          <div className="evidence">
+            <span className="evidence-label">Supporting evidence</span>
+            <Level level={{ rms: 0.12, peak: 0.999, clipping: true }} showClipping />
           </div>
         </section>
       </main>

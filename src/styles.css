@@ -532,61 +532,61 @@ footer a:hover {
 .swatch {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+  gap: var(--space-2);
   min-height: var(--swatch-min-height);
   padding: var(--space-3);
   border-radius: var(--radius);
   border: var(--border-thin) solid var(--line);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-}
-.swatch code {
-  font-weight: var(--weight-regular);
-  opacity: 0.8;
-}
-.swatch.canvas {
-  background: var(--canvas);
-}
-.swatch.surface {
   background: var(--surface);
 }
-.swatch.ink {
-  color: var(--on-accent);
-  background: var(--ink);
+.swatch-chip {
+  min-height: var(--specimen-size);
+  border-radius: var(--radius-sm);
+  border: var(--border-thin) solid var(--line);
 }
-.swatch.muted {
-  color: var(--on-accent);
-  background: var(--muted);
+.ds-token {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
 }
-.swatch.accent {
-  color: var(--on-accent);
-  background: var(--accent);
+.ds-token code {
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
 }
-.swatch.check {
-  color: var(--on-accent);
-  background: var(--check);
+.ds-value {
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
-.swatch.pass-bg {
-  color: var(--pass-ink);
-  background: var(--pass-bg);
-}
-.swatch.check-bg {
-  color: var(--check-ink);
-  background: var(--check-bg);
-}
-.swatch.meter-track {
-  background: var(--meter-track);
-}
-.swatch.focus {
-  color: var(--on-accent);
-  background: var(--focus);
+.ds-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--swatch-col), 1fr));
+  gap: var(--space-3);
 }
 .ds-type {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 .ds-type p {
   margin: 0;
+}
+.ds-type-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ds-shadow {
+  display: grid;
+  place-items: center;
+  min-height: var(--specimen-size);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: var(--text-xs);
+}
+.ds-states {
+  display: grid;
+  gap: var(--space-4);
 }
 .ds-scale {
   display: grid;
@@ -620,8 +620,9 @@ footer a:hover {
 .ds-radii span {
   display: grid;
   place-items: center;
-  width: var(--specimen-size);
-  height: var(--specimen-size);
+  min-width: var(--specimen-size);
+  min-height: var(--specimen-size);
+  padding: var(--space-3);
   background: var(--accent-soft);
   border: var(--border-thin) solid var(--pass-line);
   font-size: var(--text-xs);
