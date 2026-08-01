@@ -50,6 +50,18 @@ function parseScenario(raw: string | null): FakeScenario {
 
 export function createFakeEngine(raw: string | null): AudioEngine {
   const scenario = parseScenario(raw);
+  const pending = new Set<ReturnType<typeof setTimeout>>();
+
+  function delay(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        pending.delete(timer);
+        resolve();
+      }, ms);
+      pending.add(timer);
+    });
+  }
+
   return {
     requestPermission(): Promise<void> {
       if (scenario.deny) {
@@ -81,11 +93,9 @@ export function createFakeEngine(raw: string | null): AudioEngine {
       return Promise.resolve(new Blob([new Uint8Array(0)], { type: "audio/webm" }));
     },
     reset(): Promise<void> {
+      pending.forEach((timer) => clearTimeout(timer));
+      pending.clear();
       return Promise.resolve();
     },
   };
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
