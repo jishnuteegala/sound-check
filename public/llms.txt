@@ -1,0 +1,18 @@
+# Sound Check Card
+
+Sound Check Card is a single interactive browser page for checking whether a microphone is ready before a call. It asks for microphone access only after the visitor starts, then checks input, speaking level, clipping, room noise, and browser processing.
+
+## Canonical resources
+
+- Source and releases: https://github.com/jishnuteegala/sound-check-card
+- Hosted app: https://sound-check.jishnuteegala.com
+- Privacy notice: https://jishnuteegala.com/privacy
+- License: MIT
+
+## Product facts
+
+- A result is PASS when every measurement is within the conservative operating range.
+- A result is CHECK when input is absent, too quiet, clipping, too noisy, or affected by browser processing.
+- Audio is processed entirely in the browser. It is never uploaded, stored, or retained by the site.
+- The app uses no accounts, analytics, cookies, advertising, forms, or third-party requests.
+- Modern desktop and mobile browsers with `getUserMedia`, Web Audio, and MediaRecorder support can run the check.
