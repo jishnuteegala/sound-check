@@ -47,14 +47,14 @@ jobs:
         run: |
           TAG_NAME="$TAG_NAME" python -X utf8 -c 'import os, re; tag=os.environ["TAG_NAME"]; pattern=r"^v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"; assert re.fullmatch(pattern, tag), f"Invalid semantic version tag: {tag}"'
       - name: Check out release tooling
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: main
           path: tooling
           fetch-depth: 0
           persist-credentials: false
       - name: Check out released source
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ env.TAG_NAME }}
           path: source
@@ -81,8 +81,6 @@ jobs:
         working-directory: source
         run: pnpm install --frozen-lockfile && pnpm run check && pnpm run build
       - name: Package reproducible distribution
-        env:
-          TAG_NAME: ${{ env.TAG_NAME }}
         run: |
           export SOURCE_DATE_EPOCH="$(git -C tooling show -s --format=%ct "$TAG_NAME")"
           python -X utf8 tooling/scripts/package_release.py "${TAG_NAME#v}" source artifact

@@ -71,6 +71,8 @@ mkdir -p sound-check-card && tar -xzf "sound-check-card-$VERSION.tar.gz" -C soun
 
 The extracted archive is a static site with hash-based navigation. It needs no SPA fallback or rewrite rule.
 
+`_headers` is applied automatically only by Cloudflare Pages and Netlify; configure equivalent headers explicitly for other hosts.
+
 ### 2. Pick a host
 
 **Cloudflare Pages**
@@ -108,6 +110,10 @@ server {
     server_name sound-check.example.com;
     root /var/www/sound-check-card;
     index index.html;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=(), usb=()" always;
     location /assets/ {
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
@@ -121,6 +127,12 @@ Copy the extracted files to `/var/www/sound-check-card` and reload nginx.
 ```caddy
 sound-check.example.com {
     root * /var/www/sound-check-card
+    header {
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        Referrer-Policy "no-referrer"
+        X-Content-Type-Options "nosniff"
+        Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=(), usb=()"
+    }
     file_server
 }
 ```
@@ -130,7 +142,24 @@ sound-check.example.com {
 ```dockerfile
 FROM nginx:alpine
 COPY sound-check-card/ /usr/share/nginx/html/
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
+```
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=(), usb=()" always;
+    location /assets/ {
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+}
 ```
 
 ```sh
@@ -138,10 +167,10 @@ docker build -t sound-check-card .
 docker run --rm -p 8080:80 sound-check-card
 ```
 
-Or run the extracted bundle directly:
+Or run the extracted bundle directly with the same nginx configuration:
 
 ```sh
-docker run --rm -p 8080:80 -v "$PWD/sound-check-card:/usr/share/nginx/html:ro" nginx:alpine
+docker run --rm -p 8080:80 -v "$PWD/sound-check-card:/usr/share/nginx/html:ro" -v "$PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:alpine
 ```
 
 ## Releases
