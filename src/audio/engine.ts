@@ -28,8 +28,14 @@ export interface PhaseSampler {
 export interface AudioEngine {
   requestPermission(deviceId?: string): Promise<void>;
   listInputs(): Promise<AudioDevice[]>;
-  capture(onLiveLevel?: (level: LiveLevel) => void): Promise<CaptureMeasurements>;
+  capture(callbacks?: CaptureCallbacks): Promise<CaptureMeasurements>;
+  recordPlayback(): Promise<Blob>;
   reset(): Promise<void>;
+}
+
+export interface CaptureCallbacks {
+  onLiveLevel?: (level: LiveLevel) => void;
+  onPhase?: (phase: "quiet" | "speak") => void;
 }
 
 export function createAudioEngine(
@@ -78,16 +84,41 @@ export function createAudioEngine(
         .filter((device) => device.kind === "audioinput")
         .map(({ deviceId, label }) => ({ deviceId, label }));
     },
-    async capture(onLiveLevel): Promise<CaptureMeasurements> {
+    async capture(callbacks): Promise<CaptureMeasurements> {
       if (!sampler) throw new Error("Microphone permission is required before capture.");
-      const unsubscribe = onLiveLevel ? sampler.subscribe(onLiveLevel) : undefined;
+      const unsubscribe = callbacks?.onLiveLevel
+        ? sampler.subscribe(callbacks.onLiveLevel)
+        : undefined;
       try {
+        callbacks?.onPhase?.("quiet");
         const quiet = measureSamples(await sampler.sample(captureDurations.quietMs));
+        callbacks?.onPhase?.("speak");
         const speak = measureSamples(await sampler.sample(captureDurations.speakMs));
         return { quiet, speak, processing };
       } finally {
         unsubscribe?.();
       }
+    },
+    recordPlayback(): Promise<Blob> {
+      if (!stream || typeof MediaRecorder === "undefined") {
+        return Promise.reject(new Error("Playback capture is not available in this browser."));
+      }
+      const activeStream = stream;
+      return new Promise((resolve, reject) => {
+        const recorder = new MediaRecorder(activeStream);
+        const chunks: Blob[] = [];
+        recorder.addEventListener("dataavailable", (event) => {
+          if (event.data.size > 0) chunks.push(event.data);
+        });
+        recorder.addEventListener("error", () =>
+          reject(new Error("Playback capture could not start.")),
+        );
+        recorder.addEventListener("stop", () =>
+          resolve(new Blob(chunks, { type: recorder.mimeType })),
+        );
+        recorder.start();
+        window.setTimeout(() => recorder.state === "recording" && recorder.stop(), 10_000);
+      });
     },
     async reset(): Promise<void> {
       await teardown();
