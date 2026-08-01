@@ -449,8 +449,8 @@ function Playback({
 function Footer() {
   return (
     <footer>
-      <span>© 2026 sound-check-card</span>
-      <a href="/privacy">Privacy</a>
+      <span>© {new Date().getFullYear()} Jishnu Teegala</span>
+      <a href="https://jishnuteegala.com/privacy">Privacy</a>
       <a href="https://github.com/jishnuteegala/sound-check-card">Source</a>
     </footer>
   );
