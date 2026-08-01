@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createAudioEngine, type AudioDevice, type LiveLevel } from "./audio/engine";
+import { createFakeEngine } from "./audio/fake-engine";
 import {
   checkBrowserProcessing,
   checkClipping,
@@ -17,12 +18,27 @@ import {
   type FlowEvent,
   type FlowState,
 } from "./flow";
-import styles from "./styles.css";
+import {
+  colorTokens,
+  controlTokens,
+  fontTokens,
+  layeringTokens,
+  layoutTokens,
+  leadingTokens,
+  motionTokens,
+  radiusTokens,
+  shadowTokens,
+  spaceTokens,
+  textTokens,
+  trackingTokens,
+  weightTokens,
+} from "./tokens";
+import "./styles.css";
 
-const engine = createAudioEngine();
+const fakeScenario = import.meta.env.DEV ? new URLSearchParams(location.search).get("fake") : null;
+const engine = fakeScenario !== null ? createFakeEngine(fakeScenario) : createAudioEngine();
 const METER_GAIN = 500;
 const PERCENT_SCALE = 100;
-void styles;
 
 export function App() {
   const [flow, setFlow] = useState<FlowState>(initialFlow);
@@ -137,15 +153,19 @@ export function App() {
       <main id="main-content" className="check-layout">
         <section className="intro" aria-labelledby="page-title">
           <h1 id="page-title">Know your microphone before the call starts.</h1>
-          <p>One practical check for input, speaking level, clipping, and room noise.</p>
-          <aside className="disclaimer">
-            <strong>Before your meeting:</strong> a PASS here cannot guarantee Zoom, Meet, or Teams.
-            Those apps may apply their own processing.
-          </aside>
-          <p className="retention">
-            <strong>Zero retention.</strong> Audio stays in this browser and is never uploaded or
-            saved.
+          <p className="lede">
+            One practical check for input, speaking level, clipping, and room noise.
           </p>
+          <div className="intro-notes">
+            <aside className="disclaimer">
+              <strong>Before your meeting:</strong> a PASS here cannot guarantee Zoom, Meet, or
+              Teams. Those apps may apply their own processing.
+            </aside>
+            <p className="retention">
+              <strong>Zero retention.</strong> Audio stays in this browser and is never uploaded or
+              saved.
+            </p>
+          </div>
         </section>
         <section className="check-panel" aria-live="polite">
           {flow.screen === "idle" && <Idle onStart={() => void requestPermission()} />}
@@ -185,9 +205,11 @@ function Idle({ onStart }: { onStart: () => void }) {
     <>
       <h2>Ready when you are.</h2>
       <p>We will ask for microphone access only after you start.</p>
-      <button className="button primary" type="button" onClick={onStart}>
-        Check my microphone
-      </button>
+      <div className="panel-actions">
+        <button className="button primary block" type="button" onClick={onStart}>
+          Check my microphone
+        </button>
+      </div>
     </>
   );
 }
@@ -195,6 +217,7 @@ function Idle({ onStart }: { onStart: () => void }) {
 function Pending() {
   return (
     <>
+      <p className="step">Step 1 of 3</p>
       <h2>Allow microphone access</h2>
       <p>Choose “Allow” in your browser prompt. We will show available inputs next.</p>
     </>
@@ -209,9 +232,11 @@ function Blocked({ error, onReturn }: { error: string; onReturn: () => void }) {
         {error || "Microphone access was blocked."} Re-enable it from this site’s permissions in
         your browser settings, then try again.
       </p>
-      <button className="button primary" type="button" onClick={onReturn}>
-        Back to start
-      </button>
+      <div className="panel-actions">
+        <button className="button primary block" type="button" onClick={onReturn}>
+          Back to start
+        </button>
+      </div>
     </>
   );
 }
@@ -232,6 +257,7 @@ function DevicePick({
   const mobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
   return (
     <>
+      <p className="step">Step 2 of 3</p>
       <h2>Choose your input</h2>
       {mobile ? (
         <p className="notice">
@@ -256,9 +282,11 @@ function DevicePick({
           {error}
         </p>
       )}
-      <button className="button primary" type="button" onClick={onStart}>
-        Start microphone check
-      </button>
+      <div className="panel-actions">
+        <button className="button primary block" type="button" onClick={onStart}>
+          Start microphone check
+        </button>
+      </div>
     </>
   );
 }
@@ -267,14 +295,17 @@ function Guidance({ phase, level }: { phase: "quiet" | "speak"; level: LiveLevel
   const speaking = phase === "speak";
   return (
     <>
-      <p className="step">{speaking ? "Step 2 of 2" : "Step 1 of 2"}</p>
+      <p className="step">Step 3 of 3 · {speaking ? "Speaking" : "Quiet"} phase</p>
       <h2>{speaking ? "Speak normally" : "Stay quiet"}</h2>
       <p>
         {speaking
           ? "Talk at the level you expect to use in the call."
           : "We are measuring the room before you speak."}
       </p>
-      <Level level={level} showClipping={speaking} />
+      <div className="evidence">
+        <span className="evidence-label">Live input level</span>
+        <Level level={level} showClipping={speaking} />
+      </div>
     </>
   );
 }
@@ -304,30 +335,32 @@ function VerdictCard({
   );
   return (
     <>
-      <p className={`status ${verdict.status.toLowerCase()}`}>{verdict.status}</p>
-      <h2>
-        {verdict.status === "PASS"
-          ? "Your microphone passed this check."
-          : "Review your microphone setup."}
-      </h2>
+      <div className="verdict-head">
+        <span className={`status ${verdict.status.toLowerCase()}`}>{verdict.status}</span>
+        <h2>
+          {verdict.status === "PASS"
+            ? "Your microphone passed this check."
+            : "Review your microphone setup."}
+        </h2>
+      </div>
       <div className="findings">
         {highlights.length ? (
           highlights.map((result) => (
-            <div key={result.id}>
+            <div key={result.id} className={`finding ${result.status}`}>
               <strong>{result.label}</strong>
               <p>{result.reason}</p>
               {result.status === "check" && <p className="action">Next: {result.nextAction}</p>}
             </div>
           ))
         ) : (
-          <div>
+          <div className="finding info">
             <strong>All checks passed</strong>
             <p>Your input, speaking level, clipping, and quiet-period noise passed this check.</p>
           </div>
         )}
       </div>
       <div className="evidence">
-        <h3>Supporting evidence</h3>
+        <span className="evidence-label">Supporting evidence</span>
         <Level level={level} showClipping />
       </div>
       {browserProcessingActive && (
@@ -343,9 +376,11 @@ function VerdictCard({
         onRecord={onRecord}
         onDiscard={onDiscard}
       />
-      <button className="button primary" type="button" onClick={onReset}>
-        Check again
-      </button>
+      <div className="panel-actions">
+        <button className="button primary block" type="button" onClick={onReset}>
+          Check again
+        </button>
+      </div>
     </>
   );
 }
@@ -357,12 +392,14 @@ function Level({ level, showClipping }: { level: LiveLevel; showClipping: boolea
       <div className="meter" aria-hidden="true">
         <span style={{ "--level": `${meterValue}%` } as React.CSSProperties} />
       </div>
-      <span>Input level</span>
-      {showClipping && (
-        <span className={level.clipping ? "clip active" : "clip"}>
-          Clipping {level.clipping ? "detected" : "not detected"}
-        </span>
-      )}
+      <div className="level-row">
+        <span>Input level</span>
+        {showClipping && (
+          <span className={level.clipping ? "clip active" : "clip"}>
+            Clipping {level.clipping ? "detected" : "not detected"}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -419,7 +456,152 @@ function Footer() {
   );
 }
 
+function useTokenValues(): (token: string) => string {
+  const [root, setRoot] = useState<CSSStyleDeclaration>();
+  useEffect(() => {
+    setRoot(getComputedStyle(document.documentElement));
+  }, []);
+  return (token) => root?.getPropertyValue(token).trim() ?? "";
+}
+
+function TokenValue({ read, token }: { read: (token: string) => string; token: string }) {
+  return (
+    <span className="ds-token">
+      <code>{token}</code>
+      <span className="ds-value">{read(token) || "—"}</span>
+    </span>
+  );
+}
+
+function ColourGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-grid">
+      {colorTokens.map((token) => (
+        <span key={token} className="swatch">
+          <span className="swatch-chip" style={{ background: `var(${token})` }} />
+          <TokenValue read={read} token={token} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function SpaceGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-scale">
+      {spaceTokens.map((token) => (
+        <div key={token} className="ds-ruler">
+          <span style={{ width: `var(${token})` }} />
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TypeGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-type">
+      {textTokens.map((token) => (
+        <div key={token} className="ds-type-row">
+          <span style={{ fontSize: `var(${token})`, lineHeight: "var(--leading-tight)" }}>
+            Speak normally
+          </span>
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function LeadingGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-type">
+      {leadingTokens.map((token) => (
+        <div key={token} className="ds-type-row">
+          <p style={{ lineHeight: `var(${token})`, margin: 0, maxWidth: "var(--measure-lede)" }}>
+            One practical check for input, speaking level, clipping, and room noise before your
+            call.
+          </p>
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WeightGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-type">
+      {weightTokens.map((token) => (
+        <div key={token} className="ds-type-row">
+          <span style={{ fontWeight: `var(${token})`, fontSize: "var(--text-lg)" }}>
+            Know your microphone
+          </span>
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function TrackingGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-type">
+      {trackingTokens.map((token) => (
+        <div key={token} className="ds-type-row">
+          <span
+            style={{
+              letterSpacing: `var(${token})`,
+              textTransform: "uppercase",
+              fontWeight: "var(--weight-semibold)",
+            }}
+          >
+            Supporting evidence
+          </span>
+          <TokenValue read={read} token={token} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RadiiGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-radii">
+      {radiusTokens.map((token) => (
+        <span key={token} style={{ borderRadius: `var(${token})` }}>
+          <TokenValue read={read} token={token} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ShadowGroup({ read }: { read: (token: string) => string }) {
+  return (
+    <div className="ds-row">
+      {shadowTokens.map((token) => (
+        <span key={token} className="ds-shadow" style={{ boxShadow: `var(${token})` }}>
+          <TokenValue read={read} token={token} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function ValueList({ read, tokens }: { read: (token: string) => string; tokens: string[] }) {
+  return (
+    <div className="ds-list">
+      {tokens.map((token) => (
+        <TokenValue key={token} read={read} token={token} />
+      ))}
+    </div>
+  );
+}
+
 function DesignSystem() {
+  const read = useTokenValues();
   return (
     <div className="site-shell">
       <a className="skip-link" href="#tokens">
@@ -429,36 +611,183 @@ function DesignSystem() {
         <a className="wordmark" href="#/">
           sound-check-card
         </a>
+        <a className="quiet-link" href="#/">
+          Back to check
+        </a>
       </header>
       <main id="tokens" className="design-system">
         <h1>Design system</h1>
-        <section>
+        <p className="lede">
+          Every value on this site flows from the tokens below, listed from a single typed source
+          that a test holds in lockstep with the stylesheet. Nothing is set by hand.
+        </p>
+        <section className="ds-section">
           <h2>Colour</h2>
-          <div className="swatches">
-            <span className="swatch canvas">Canvas</span>
-            <span className="swatch surface">Surface</span>
-            <span className="swatch ink">Ink</span>
-            <span className="swatch accent">Accent</span>
-            <span className="swatch warning">Check</span>
-            <span className="swatch pass">Pass background</span>
-            <span className="swatch meter-track">Meter track</span>
-            <span className="swatch focus">Focus</span>
-            <span className="swatch on-accent">On accent</span>
+          <ColourGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Spacing scale</h2>
+          <SpaceGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Type scale</h2>
+          <TypeGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Line height</h2>
+          <LeadingGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Font weight</h2>
+          <WeightGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Tracking</h2>
+          <TrackingGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Radii</h2>
+          <RadiiGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Shadow</h2>
+          <ShadowGroup read={read} />
+        </section>
+        <section className="ds-section">
+          <h2>Controls &amp; states</h2>
+          <ValueList read={read} tokens={controlTokens} />
+        </section>
+        <section className="ds-section">
+          <h2>Motion</h2>
+          <ValueList read={read} tokens={motionTokens} />
+        </section>
+        <section className="ds-section">
+          <h2>Layout</h2>
+          <ValueList read={read} tokens={layoutTokens} />
+        </section>
+        <section className="ds-section">
+          <h2>Layering</h2>
+          <ValueList read={read} tokens={layeringTokens} />
+        </section>
+        <section className="ds-section">
+          <h2>Font</h2>
+          <ValueList read={read} tokens={fontTokens} />
+        </section>
+        <section className="ds-section">
+          <h2>Buttons</h2>
+          <div className="ds-row">
+            <button className="button primary" type="button">
+              Primary action
+            </button>
+            <button className="button secondary" type="button">
+              Secondary action
+            </button>
+            <button className="button primary" type="button" disabled>
+              Disabled
+            </button>
           </div>
         </section>
-        <section>
-          <h2>Type</h2>
-          <h3>Clear audio guidance</h3>
-          <p>Body text is sized for calm, direct instructions.</p>
+        <section className="ds-section">
+          <h2>Field &amp; select</h2>
+          <label className="field">
+            Microphone
+            <select defaultValue="builtin">
+              <option value="builtin">Built-in Microphone</option>
+              <option value="usb">Yeti USB Microphone</option>
+            </select>
+          </label>
         </section>
-        <section>
-          <h2>Primitives</h2>
-          <button className="button primary" type="button">
-            Primary action
-          </button>
-          <button className="button secondary" type="button">
-            Secondary action
-          </button>
+        <section className="ds-section">
+          <h2>Status</h2>
+          <div className="ds-row">
+            <span className="status pass">PASS</span>
+            <span className="status check">CHECK</span>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Notice &amp; error</h2>
+          <p className="notice">
+            Meeting apps may process audio differently. This check reports whether your browser
+            could turn off its own input processing.
+          </p>
+          <p className="error" role="alert">
+            Playback capture could not start.
+          </p>
+        </section>
+        <section className="ds-section">
+          <h2>Disclaimer &amp; retention</h2>
+          <div className="intro-notes">
+            <aside className="disclaimer">
+              <strong>Before your meeting:</strong> a PASS here cannot guarantee Zoom, Meet, or
+              Teams. Those apps may apply their own processing.
+            </aside>
+            <p className="retention">
+              <strong>Zero retention.</strong> Audio stays in this browser and is never uploaded or
+              saved.
+            </p>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Findings</h2>
+          <div className="findings">
+            <div className="finding check">
+              <strong>Clipping</strong>
+              <p>Your microphone signal is clipping.</p>
+              <p className="action">Next: Lower microphone gain or move farther away.</p>
+            </div>
+            <div className="finding info">
+              <strong>Browser processing</strong>
+              <p>Your browser is processing this input; your meeting app may behave differently.</p>
+            </div>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Panel</h2>
+          <div className="check-panel">
+            <p className="step">Step 3 of 3 · Speaking phase</p>
+            <h2>Speak normally</h2>
+            <p>Talk at the level you expect to use in the call.</p>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Blocked &amp; pending states</h2>
+          <div className="ds-states">
+            <div className="check-panel">
+              <p className="step">Step 1 of 3</p>
+              <h2>Allow microphone access</h2>
+              <p>Choose “Allow” in your browser prompt. We will show available inputs next.</p>
+            </div>
+            <div className="check-panel">
+              <h2>We could not access your microphone.</h2>
+              <p>Re-enable it from this site’s permissions in your browser settings, then retry.</p>
+            </div>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Playback controls</h2>
+          <div className="playback">
+            <p>
+              Optional: make a local recording of up to 10 seconds to hear this input. It stays in
+              memory only.
+            </p>
+            <button className="button secondary" type="button">
+              Record up to 10 seconds
+            </button>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Level meter</h2>
+          <div className="evidence">
+            <span className="evidence-label">Supporting evidence</span>
+            <Level level={{ rms: 0.09, peak: 0.4, clipping: false }} showClipping />
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Clipping active</h2>
+          <div className="evidence">
+            <span className="evidence-label">Supporting evidence</span>
+            <Level level={{ rms: 0.12, peak: 0.999, clipping: true }} showClipping />
+          </div>
         </section>
       </main>
       <Footer />
