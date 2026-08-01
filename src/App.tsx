@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createAudioEngine, type AudioDevice, type LiveLevel } from "./audio/engine";
+import { createFakeEngine } from "./audio/fake-engine";
 import {
   checkBrowserProcessing,
   checkClipping,
@@ -17,12 +18,12 @@ import {
   type FlowEvent,
   type FlowState,
 } from "./flow";
-import styles from "./styles.css";
+import "./styles.css";
 
-const engine = createAudioEngine();
+const fakeScenario = import.meta.env.DEV ? new URLSearchParams(location.search).get("fake") : null;
+const engine = fakeScenario !== null ? createFakeEngine(fakeScenario) : createAudioEngine();
 const METER_GAIN = 500;
 const PERCENT_SCALE = 100;
-void styles;
 
 export function App() {
   const [flow, setFlow] = useState<FlowState>(initialFlow);
@@ -137,15 +138,19 @@ export function App() {
       <main id="main-content" className="check-layout">
         <section className="intro" aria-labelledby="page-title">
           <h1 id="page-title">Know your microphone before the call starts.</h1>
-          <p>One practical check for input, speaking level, clipping, and room noise.</p>
-          <aside className="disclaimer">
-            <strong>Before your meeting:</strong> a PASS here cannot guarantee Zoom, Meet, or Teams.
-            Those apps may apply their own processing.
-          </aside>
-          <p className="retention">
-            <strong>Zero retention.</strong> Audio stays in this browser and is never uploaded or
-            saved.
+          <p className="lede">
+            One practical check for input, speaking level, clipping, and room noise.
           </p>
+          <div className="intro-notes">
+            <aside className="disclaimer">
+              <strong>Before your meeting:</strong> a PASS here cannot guarantee Zoom, Meet, or
+              Teams. Those apps may apply their own processing.
+            </aside>
+            <p className="retention">
+              <strong>Zero retention.</strong> Audio stays in this browser and is never uploaded or
+              saved.
+            </p>
+          </div>
         </section>
         <section className="check-panel" aria-live="polite">
           {flow.screen === "idle" && <Idle onStart={() => void requestPermission()} />}
@@ -185,9 +190,11 @@ function Idle({ onStart }: { onStart: () => void }) {
     <>
       <h2>Ready when you are.</h2>
       <p>We will ask for microphone access only after you start.</p>
-      <button className="button primary" type="button" onClick={onStart}>
-        Check my microphone
-      </button>
+      <div className="panel-actions">
+        <button className="button primary block" type="button" onClick={onStart}>
+          Check my microphone
+        </button>
+      </div>
     </>
   );
 }
@@ -195,6 +202,7 @@ function Idle({ onStart }: { onStart: () => void }) {
 function Pending() {
   return (
     <>
+      <p className="step">Step 1 of 3</p>
       <h2>Allow microphone access</h2>
       <p>Choose “Allow” in your browser prompt. We will show available inputs next.</p>
     </>
@@ -209,9 +217,11 @@ function Blocked({ error, onReturn }: { error: string; onReturn: () => void }) {
         {error || "Microphone access was blocked."} Re-enable it from this site’s permissions in
         your browser settings, then try again.
       </p>
-      <button className="button primary" type="button" onClick={onReturn}>
-        Back to start
-      </button>
+      <div className="panel-actions">
+        <button className="button primary block" type="button" onClick={onReturn}>
+          Back to start
+        </button>
+      </div>
     </>
   );
 }
@@ -232,6 +242,7 @@ function DevicePick({
   const mobile = /Android|iPhone|iPad/i.test(navigator.userAgent);
   return (
     <>
+      <p className="step">Step 2 of 3</p>
       <h2>Choose your input</h2>
       {mobile ? (
         <p className="notice">
@@ -256,9 +267,11 @@ function DevicePick({
           {error}
         </p>
       )}
-      <button className="button primary" type="button" onClick={onStart}>
-        Start microphone check
-      </button>
+      <div className="panel-actions">
+        <button className="button primary block" type="button" onClick={onStart}>
+          Start microphone check
+        </button>
+      </div>
     </>
   );
 }
@@ -267,14 +280,17 @@ function Guidance({ phase, level }: { phase: "quiet" | "speak"; level: LiveLevel
   const speaking = phase === "speak";
   return (
     <>
-      <p className="step">{speaking ? "Step 2 of 2" : "Step 1 of 2"}</p>
+      <p className="step">Step 3 of 3 · {speaking ? "Speaking" : "Quiet"} phase</p>
       <h2>{speaking ? "Speak normally" : "Stay quiet"}</h2>
       <p>
         {speaking
           ? "Talk at the level you expect to use in the call."
           : "We are measuring the room before you speak."}
       </p>
-      <Level level={level} showClipping={speaking} />
+      <div className="evidence">
+        <span className="evidence-label">Live input level</span>
+        <Level level={level} showClipping={speaking} />
+      </div>
     </>
   );
 }
@@ -304,30 +320,32 @@ function VerdictCard({
   );
   return (
     <>
-      <p className={`status ${verdict.status.toLowerCase()}`}>{verdict.status}</p>
-      <h2>
-        {verdict.status === "PASS"
-          ? "Your microphone passed this check."
-          : "Review your microphone setup."}
-      </h2>
+      <div className="verdict-head">
+        <span className={`status ${verdict.status.toLowerCase()}`}>{verdict.status}</span>
+        <h2>
+          {verdict.status === "PASS"
+            ? "Your microphone passed this check."
+            : "Review your microphone setup."}
+        </h2>
+      </div>
       <div className="findings">
         {highlights.length ? (
           highlights.map((result) => (
-            <div key={result.id}>
+            <div key={result.id} className={`finding ${result.status}`}>
               <strong>{result.label}</strong>
               <p>{result.reason}</p>
               {result.status === "check" && <p className="action">Next: {result.nextAction}</p>}
             </div>
           ))
         ) : (
-          <div>
+          <div className="finding info">
             <strong>All checks passed</strong>
             <p>Your input, speaking level, clipping, and quiet-period noise passed this check.</p>
           </div>
         )}
       </div>
       <div className="evidence">
-        <h3>Supporting evidence</h3>
+        <span className="evidence-label">Supporting evidence</span>
         <Level level={level} showClipping />
       </div>
       {browserProcessingActive && (
@@ -343,9 +361,11 @@ function VerdictCard({
         onRecord={onRecord}
         onDiscard={onDiscard}
       />
-      <button className="button primary" type="button" onClick={onReset}>
-        Check again
-      </button>
+      <div className="panel-actions">
+        <button className="button primary block" type="button" onClick={onReset}>
+          Check again
+        </button>
+      </div>
     </>
   );
 }
@@ -357,12 +377,14 @@ function Level({ level, showClipping }: { level: LiveLevel; showClipping: boolea
       <div className="meter" aria-hidden="true">
         <span style={{ "--level": `${meterValue}%` } as React.CSSProperties} />
       </div>
-      <span>Input level</span>
-      {showClipping && (
-        <span className={level.clipping ? "clip active" : "clip"}>
-          Clipping {level.clipping ? "detected" : "not detected"}
-        </span>
-      )}
+      <div className="level-row">
+        <span>Input level</span>
+        {showClipping && (
+          <span className={level.clipping ? "clip active" : "clip"}>
+            Clipping {level.clipping ? "detected" : "not detected"}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
@@ -432,33 +454,117 @@ function DesignSystem() {
       </header>
       <main id="tokens" className="design-system">
         <h1>Design system</h1>
-        <section>
+        <p className="lede">
+          Every value on this site flows from the tokens below. Nothing is set by hand.
+        </p>
+        <section className="ds-section">
           <h2>Colour</h2>
-          <div className="swatches">
-            <span className="swatch canvas">Canvas</span>
-            <span className="swatch surface">Surface</span>
-            <span className="swatch ink">Ink</span>
-            <span className="swatch accent">Accent</span>
-            <span className="swatch warning">Check</span>
-            <span className="swatch pass">Pass background</span>
-            <span className="swatch meter-track">Meter track</span>
-            <span className="swatch focus">Focus</span>
-            <span className="swatch on-accent">On accent</span>
+          <div className="ds-grid">
+            <span className="swatch canvas">
+              Canvas<code>--canvas</code>
+            </span>
+            <span className="swatch surface">
+              Surface<code>--surface</code>
+            </span>
+            <span className="swatch ink">
+              Ink<code>--ink</code>
+            </span>
+            <span className="swatch muted">
+              Muted<code>--muted</code>
+            </span>
+            <span className="swatch accent">
+              Accent<code>--accent</code>
+            </span>
+            <span className="swatch check">
+              Check<code>--check</code>
+            </span>
+            <span className="swatch pass-bg">
+              Pass<code>--pass-bg</code>
+            </span>
+            <span className="swatch check-bg">
+              Check bg<code>--check-bg</code>
+            </span>
+            <span className="swatch meter-track">
+              Meter<code>--meter-track</code>
+            </span>
+            <span className="swatch focus">
+              Focus<code>--focus</code>
+            </span>
           </div>
         </section>
-        <section>
-          <h2>Type</h2>
-          <h3>Clear audio guidance</h3>
-          <p>Body text is sized for calm, direct instructions.</p>
+        <section className="ds-section">
+          <h2>Type scale</h2>
+          <div className="ds-type">
+            <h1>Display · --text-3xl</h1>
+            <h2>Heading · --text-xl</h2>
+            <h3>Subheading · --text-base</h3>
+            <p>Body copy · --text-base sits at a calm, readable measure for instructions.</p>
+            <p className="step">Label · --text-xs uppercase</p>
+          </div>
         </section>
-        <section>
-          <h2>Primitives</h2>
-          <button className="button primary" type="button">
-            Primary action
-          </button>
-          <button className="button secondary" type="button">
-            Secondary action
-          </button>
+        <section className="ds-section">
+          <h2>Spacing scale</h2>
+          <div className="ds-scale">
+            {["--space-1", "--space-2", "--space-3", "--space-4", "--space-5", "--space-6"].map(
+              (token) => (
+                <div key={token} className="ds-ruler">
+                  <span style={{ width: `var(${token})` }} />
+                  <code>{token}</code>
+                </div>
+              ),
+            )}
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Radii</h2>
+          <div className="ds-radii">
+            <span style={{ borderRadius: "var(--radius-sm)" }}>sm</span>
+            <span style={{ borderRadius: "var(--radius)" }}>base</span>
+            <span style={{ borderRadius: "var(--radius-lg)" }}>lg</span>
+            <span style={{ borderRadius: "var(--radius-pill)" }}>pill</span>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Buttons</h2>
+          <div className="ds-row">
+            <button className="button primary" type="button">
+              Primary action
+            </button>
+            <button className="button secondary" type="button">
+              Secondary action
+            </button>
+            <button className="button primary" type="button" disabled>
+              Disabled
+            </button>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Status</h2>
+          <div className="ds-row">
+            <span className="status pass">PASS</span>
+            <span className="status check">CHECK</span>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Findings</h2>
+          <div className="findings">
+            <div className="finding check">
+              <strong>Clipping</strong>
+              <p>Your microphone signal is clipping.</p>
+              <p className="action">Next: Lower microphone gain or move farther away.</p>
+            </div>
+            <div className="finding info">
+              <strong>Browser processing</strong>
+              <p>Your browser is processing this input; your meeting app may behave differently.</p>
+            </div>
+          </div>
+        </section>
+        <section className="ds-section">
+          <h2>Level meter</h2>
+          <div className="evidence">
+            <span className="evidence-label">Supporting evidence</span>
+            <Level level={{ rms: 0.09, peak: 0.4, clipping: false }} showClipping />
+          </div>
         </section>
       </main>
       <Footer />
