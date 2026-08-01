@@ -16,16 +16,30 @@ export function App() {
   const [selectedDevice, setSelectedDevice] = useState("");
   const [verdict, setVerdict] = useState<string>("No measurement yet.");
   const [busy, setBusy] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState(false);
 
   useEffect(() => () => void engine.reset(), []);
 
-  async function start(): Promise<void> {
+  async function requestPermission(): Promise<void> {
     setBusy(true);
     try {
-      await engine.requestPermission(selectedDevice || undefined);
+      await engine.requestPermission();
       const inputs = await engine.listInputs();
       setDevices(inputs);
       if (!selectedDevice && inputs[0]) setSelectedDevice(inputs[0].deviceId);
+      setPermissionGranted(true);
+      setVerdict("Choose an input, then start the microphone check.");
+    } catch (error) {
+      setVerdict(error instanceof Error ? error.message : "Microphone permission failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function capture(): Promise<void> {
+    setBusy(true);
+    try {
+      if (selectedDevice) await engine.requestPermission(selectedDevice);
       const measured = await engine.capture();
       const results = [
         checkDeadInput(measured.speak),
@@ -56,8 +70,16 @@ export function App() {
           ))}
         </select>
       </label>
-      <button type="button" onClick={() => void start()} disabled={busy}>
-        {busy ? "Checking..." : "Check my microphone"}
+      <button
+        type="button"
+        onClick={() => void (permissionGranted ? capture() : requestPermission())}
+        disabled={busy}
+      >
+        {busy
+          ? "Checking..."
+          : permissionGranted
+            ? "Start microphone check"
+            : "Check my microphone"}
       </button>
       <pre>{verdict}</pre>
     </main>

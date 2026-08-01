@@ -28,7 +28,6 @@ export interface PhaseMeasurement {
   rms: number;
   peak: number;
   clipCount: number;
-  sampleCount: number;
 }
 
 export interface AppliedProcessing {

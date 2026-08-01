@@ -28,13 +28,14 @@ export function checkLowLevel(speak: PhaseMeasurement): CheckResult {
 }
 
 export function checkClipping(speak: PhaseMeasurement): CheckResult {
+  // Peak thresholding happens while raw samples are measured; this check interprets the count.
   const failed = speak.clipCount >= thresholds.clippingSamples;
   return result(
     "clipping",
     "Clipping",
     failed ? "check" : "pass",
     { speakPeak: speak.peak, clipCount: speak.clipCount },
-    { clippingPeak: thresholds.clippingPeak, clippingSamples: thresholds.clippingSamples },
+    { clippingSamples: thresholds.clippingSamples },
     failed ? "Your microphone signal is clipping." : "No gross clipping was detected.",
     "Lower microphone gain or move farther from the microphone.",
   );

@@ -92,6 +92,14 @@ describe("check runners", () => {
   });
 });
 
+describe("measureSamples", () => {
+  it("counts samples at or above the clipping-peak boundary", () => {
+    expect(measureSamples(Float32Array.of(0.97)).clipCount).toBe(0);
+    expect(measureSamples(Float32Array.of(-0.98)).clipCount).toBe(1);
+    expect(measureSamples(Float32Array.of(0.99)).clipCount).toBe(1);
+  });
+});
+
 describe("deriveVerdict", () => {
   it.each([
     ["all pass", cleanResults(), "PASS"],
@@ -114,7 +122,7 @@ describe("deriveVerdict", () => {
 });
 
 function phase(rms: number, clipCount = 0): PhaseMeasurement {
-  return { rms, peak: clipCount > 0 ? thresholds.clippingPeak : rms, clipCount, sampleCount: 32 };
+  return { rms, peak: clipCount > 0 ? thresholds.clippingPeak : rms, clipCount };
 }
 
 function replace(

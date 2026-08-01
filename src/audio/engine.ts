@@ -1,5 +1,6 @@
 import { measureSamples } from "../core/measure";
 import type { AppliedProcessing, CaptureMeasurements, PhaseMeasurement } from "../core/model";
+import { captureDurations } from "../core/thresholds";
 
 export interface AudioDevice {
   deviceId: string;
@@ -30,9 +31,6 @@ export interface AudioEngine {
   capture(onLiveLevel?: (level: LiveLevel) => void): Promise<CaptureMeasurements>;
   reset(): Promise<void>;
 }
-
-const quietDurationMs = 2_000;
-const speakDurationMs = 3_000;
 
 export function createAudioEngine(
   platform: AudioPlatform = browserPlatform(),
@@ -84,8 +82,8 @@ export function createAudioEngine(
       if (!sampler) throw new Error("Microphone permission is required before capture.");
       const unsubscribe = onLiveLevel ? sampler.subscribe(onLiveLevel) : undefined;
       try {
-        const quiet = measureSamples(await sampler.sample(quietDurationMs));
-        const speak = measureSamples(await sampler.sample(speakDurationMs));
+        const quiet = measureSamples(await sampler.sample(captureDurations.quietMs));
+        const speak = measureSamples(await sampler.sample(captureDurations.speakMs));
         return { quiet, speak, processing };
       } finally {
         unsubscribe?.();
@@ -111,49 +109,51 @@ export function createAnalyserSampler(context: AudioContext, stream: MediaStream
   const analyser = context.createAnalyser();
   analyser.fftSize = 2048;
   source.connect(analyser);
-  const buffer = new Float32Array(analyser.fftSize);
-  let frame: number | undefined;
-
-  function current(): PhaseMeasurement {
-    analyser.getFloatTimeDomainData(buffer);
-    return measureSamples(buffer);
-  }
+  let sampleFrame: number | undefined;
+  let subscriptionFrame: number | undefined;
 
   return {
     sample(durationMs): Promise<Float32Array> {
       return new Promise((resolve) => {
-        const samples: number[] = [];
+        const chunks: Float32Array[] = [];
         const startedAt = performance.now();
+        const buffer = new Float32Array(analyser.fftSize);
         const collect = () => {
           analyser.getFloatTimeDomainData(buffer);
-          samples.push(...buffer);
+          chunks.push(buffer.slice());
           if (performance.now() - startedAt < durationMs) {
-            frame = window.requestAnimationFrame(collect);
+            sampleFrame = window.requestAnimationFrame(collect);
           } else {
-            resolve(Float32Array.from(samples));
+            const samples = new Float32Array(chunks.length * analyser.fftSize);
+            chunks.forEach((chunk, index) => samples.set(chunk, index * analyser.fftSize));
+            sampleFrame = undefined;
+            resolve(samples);
           }
         };
         collect();
       });
     },
     subscribe(listener): () => void {
+      const buffer = new Float32Array(analyser.fftSize);
       const update = () => {
-        const measurement = current();
+        analyser.getFloatTimeDomainData(buffer);
+        const measurement: PhaseMeasurement = measureSamples(buffer);
         listener({
           rms: measurement.rms,
           peak: measurement.peak,
           clipping: measurement.clipCount > 0,
         });
-        frame = window.requestAnimationFrame(update);
+        subscriptionFrame = window.requestAnimationFrame(update);
       };
       update();
       return () => {
-        if (frame !== undefined) window.cancelAnimationFrame(frame);
-        frame = undefined;
+        if (subscriptionFrame !== undefined) window.cancelAnimationFrame(subscriptionFrame);
+        subscriptionFrame = undefined;
       };
     },
     close(): void {
-      if (frame !== undefined) window.cancelAnimationFrame(frame);
+      if (sampleFrame !== undefined) window.cancelAnimationFrame(sampleFrame);
+      if (subscriptionFrame !== undefined) window.cancelAnimationFrame(subscriptionFrame);
       source.disconnect();
       analyser.disconnect();
     },

@@ -3,7 +3,7 @@ import { thresholds } from "./thresholds";
 
 export function measureSamples(samples: Float32Array): PhaseMeasurement {
   if (samples.length === 0) {
-    return { rms: 0, peak: 0, clipCount: 0, sampleCount: 0 };
+    return { rms: 0, peak: 0, clipCount: 0 };
   }
 
   let sumSquares = 0;
@@ -19,6 +19,5 @@ export function measureSamples(samples: Float32Array): PhaseMeasurement {
     rms: Math.sqrt(sumSquares / samples.length),
     peak,
     clipCount,
-    sampleCount: samples.length,
   };
 }
