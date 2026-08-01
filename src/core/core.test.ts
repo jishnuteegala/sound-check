@@ -58,6 +58,8 @@ describe("check runners", () => {
     expect(checkDeadInput(phase(thresholds.deadRms - 0.0001)).status).toBe("check");
     expect(checkDeadInput(phase(thresholds.deadRms)).status).toBe("check");
     expect(checkDeadInput(phase(thresholds.deadRms + 0.0001)).status).toBe("pass");
+    expect(checkDeadInput(phase(0.0029)).status).toBe("check");
+    expect(checkDeadInput(phase(0.0031)).status).toBe("pass");
 
     expect(checkLowLevel(phase(thresholds.lowSpeechRms - 0.0001)).status).toBe("check");
     expect(checkLowLevel(phase(thresholds.lowSpeechRms)).status).toBe("check");
@@ -78,12 +80,8 @@ describe("check runners", () => {
     ).toBe("info");
 
     expect(checkNoisyQuiet(phase(0.65), phase(1)).status).toBe("info");
-    expect(checkNoisyQuiet(phase(thresholds.noisyQuietUnusableRatio), phase(1)).status).toBe(
-      "check",
-    );
-    expect(checkNoisyQuiet(phase(thresholds.noisyQuietUnusableRatio + 0.01), phase(1)).status).toBe(
-      "check",
-    );
+    expect(checkNoisyQuiet(phase(0.8), phase(1)).status).toBe("check");
+    expect(checkNoisyQuiet(phase(0.81), phase(1)).status).toBe("check");
   });
 });
 
