@@ -1,10 +1,10 @@
-# Sound Check Card
+# Sound Check
 
-[![CI](https://github.com/jishnuteegala/sound-check-card/actions/workflows/ci.yml/badge.svg)](https://github.com/jishnuteegala/sound-check-card/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/jishnuteegala/sound-check-card?display_name=tag)](https://github.com/jishnuteegala/sound-check-card/releases)
+[![CI](https://github.com/jishnuteegala/sound-check/actions/workflows/ci.yml/badge.svg)](https://github.com/jishnuteegala/sound-check/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/jishnuteegala/sound-check?display_name=tag)](https://github.com/jishnuteegala/sound-check/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-111827.svg)](LICENSE)
 
-Sound Check Card answers the question behind "microphone not working in meetings", "mic check before call", and "am I too quiet on calls": is the microphone signal itself ready before the call starts? It is a private, browser-only microphone check that gives a plain PASS or CHECK verdict before Zoom, Meet, Teams, or another call app gets involved.
+Sound Check answers the question behind "microphone not working in meetings", "mic check before call", and "am I too quiet on calls": is the microphone signal itself ready before the call starts? It is a private, browser-only microphone check that gives a plain PASS or CHECK verdict before Zoom, Meet, Teams, or another call app gets involved.
 
 ## What it does
 
@@ -18,7 +18,7 @@ Start the check, allow microphone access, choose an input when the browser expos
 
 PASS means each measurement is within the tool's conservative operating range. CHECK means one or more measurements need attention: no input, a quiet signal, clipping, excessive room noise, or browser processing. A PASS does not guarantee that a meeting app will not apply its own processing or have its own device setting.
 
-Audio is processed entirely in the browser. It is never uploaded, stored, or retained by the site. Sound Check Card uses no analytics, cookies, accounts, advertising, forms, or third-party requests.
+Audio is processed entirely in the browser. It is never uploaded, stored, or retained by the site. Sound Check uses no analytics, cookies, accounts, advertising, forms, or third-party requests.
 
 ## Browser support
 
@@ -57,16 +57,16 @@ The public app deploys continuously from `main` to [sound-check.jishnuteegala.co
 
 ## Self-hosting
 
-Use a tagged GitHub Release rather than an arbitrary commit. Every release includes prebuilt `sound-check-card-<version>.zip` and `.tar.gz` static bundles plus `SHA256SUMS`.
+Use a tagged GitHub Release rather than an arbitrary commit. Every release includes prebuilt `sound-check-<version>.zip` and `.tar.gz` static bundles plus `SHA256SUMS`.
 
 ### 1. Download and verify
 
 ```sh
 VERSION=0.1.0
-curl -fLO "https://github.com/jishnuteegala/sound-check-card/releases/download/v$VERSION/sound-check-card-$VERSION.tar.gz"
-curl -fLO "https://github.com/jishnuteegala/sound-check-card/releases/download/v$VERSION/SHA256SUMS"
+curl -fLO "https://github.com/jishnuteegala/sound-check/releases/download/v$VERSION/sound-check-$VERSION.tar.gz"
+curl -fLO "https://github.com/jishnuteegala/sound-check/releases/download/v$VERSION/SHA256SUMS"
 sha256sum --check --ignore-missing SHA256SUMS
-mkdir -p sound-check-card && tar -xzf "sound-check-card-$VERSION.tar.gz" -C sound-check-card
+mkdir -p sound-check && tar -xzf "sound-check-$VERSION.tar.gz" -C sound-check
 ```
 
 The extracted archive is a static site with hash-based navigation. It needs no SPA fallback or rewrite rule.
@@ -77,7 +77,7 @@ The extracted archive is a static site with hash-based navigation. It needs no S
 
 **Cloudflare Pages**
 
-Create a Pages project in the Cloudflare dashboard and direct-upload the extracted `sound-check-card/` directory. For Git integration, use build command `pnpm run build` and output directory `dist`; `public/_headers` is included automatically. Add your custom domain in Pages after the first deploy.
+Create a Pages project in the Cloudflare dashboard and direct-upload the extracted `sound-check/` directory. For Git integration, use build command `pnpm run build` and output directory `dist`; `public/_headers` is included automatically. Add your custom domain in Pages after the first deploy.
 
 **Vercel**
 
@@ -94,9 +94,9 @@ Publish the extracted directory from a `gh-pages` branch:
 ```sh
 git checkout --orphan gh-pages
 git rm -rf .
-cp -R sound-check-card/. .
+cp -R sound-check/. .
 git add -A
-git commit -m "deploy sound-check-card"
+git commit -m "deploy sound-check"
 git push origin gh-pages
 ```
 
@@ -108,7 +108,7 @@ Enable Pages for the `gh-pages` branch in repository settings. Use a custom doma
 server {
     listen 80;
     server_name sound-check.example.com;
-    root /var/www/sound-check-card;
+    root /var/www/sound-check;
     index index.html;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
     add_header Referrer-Policy "no-referrer" always;
@@ -120,13 +120,13 @@ server {
 }
 ```
 
-Copy the extracted files to `/var/www/sound-check-card` and reload nginx.
+Copy the extracted files to `/var/www/sound-check` and reload nginx.
 
 **VPS with Caddy**
 
 ```caddy
 sound-check.example.com {
-    root * /var/www/sound-check-card
+    root * /var/www/sound-check
     header {
         Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         Referrer-Policy "no-referrer"
@@ -141,7 +141,7 @@ sound-check.example.com {
 
 ```dockerfile
 FROM nginx:alpine
-COPY sound-check-card/ /usr/share/nginx/html/
+COPY sound-check/ /usr/share/nginx/html/
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 ```
@@ -163,14 +163,14 @@ server {
 ```
 
 ```sh
-docker build -t sound-check-card .
-docker run --rm -p 8080:80 sound-check-card
+docker build -t sound-check .
+docker run --rm -p 8080:80 sound-check
 ```
 
 Or run the extracted bundle directly with the same nginx configuration:
 
 ```sh
-docker run --rm -p 8080:80 -v "$PWD/sound-check-card:/usr/share/nginx/html:ro" -v "$PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:alpine
+docker run --rm -p 8080:80 -v "$PWD/sound-check:/usr/share/nginx/html:ro" -v "$PWD/nginx.conf:/etc/nginx/conf.d/default.conf:ro" nginx:alpine
 ```
 
 ## Releases

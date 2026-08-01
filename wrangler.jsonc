@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "sound-check-card",
+  "name": "sound-check",
   "compatibility_date": "2026-08-01",
   "observability": {
     "enabled": false,
