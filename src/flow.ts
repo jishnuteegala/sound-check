@@ -18,6 +18,10 @@ export type FlowEvent =
 
 export const initialFlow: FlowState = { screen: "idle", phase: "quiet" };
 
+export function permissionEvent(error: unknown): "denied" | "dismissed" {
+  return error instanceof Error && error.name === "NotAllowedError" ? "denied" : "dismissed";
+}
+
 export function transition(state: FlowState, event: FlowEvent): FlowState {
   if (event === "request" && state.screen === "idle") return { ...state, screen: "permission" };
   if (event === "granted" && state.screen === "permission") return { ...state, screen: "devices" };

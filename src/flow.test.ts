@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { discardPlayback, initialFlow, transition } from "./flow";
+import { discardPlayback, initialFlow, permissionEvent, transition } from "./flow";
 
 describe("microphone check flow", () => {
   it("requires permission before device choice and a complete two-phase run before verdict", () => {
@@ -14,10 +14,20 @@ describe("microphone check flow", () => {
     expect(transition(state, "reset").screen).toBe("devices");
   });
 
-  it("returns a denied permission state to the explanatory landing state", () => {
-    const blocked = transition(transition(initialFlow, "request"), "denied");
+  it("shows an explanatory state for a NotAllowedError", () => {
+    const error = new Error("Permission was not granted.");
+    error.name = "NotAllowedError";
+    const blocked = transition(transition(initialFlow, "request"), permissionEvent(error));
     expect(blocked.screen).toBe("blocked");
     expect(transition(blocked, "reset").screen).toBe("idle");
+  });
+
+  it("returns to idle for an aborted permission prompt", () => {
+    const error = new Error("Permission prompt closed.");
+    error.name = "AbortError";
+    expect(transition(transition(initialFlow, "request"), permissionEvent(error))).toEqual(
+      initialFlow,
+    );
   });
 });
 

@@ -3,12 +3,16 @@
   --surface: #ffffff;
   --ink: #202522;
   --muted: #56605b;
-  --line: #a9b0aa;
+  --line: #8a938c;
   --accent: #1d5b45;
   --accent-hover: #164734;
+  --on-accent: #ffffff;
   --check: #a13e25;
   --check-bg: #f9ece7;
   --pass: #1d5b45;
+  --pass-bg: #e7f1eb;
+  --meter-track: #d7dbd5;
+  --focus: #c5771b;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -22,6 +26,7 @@
   --text-xl: 1.75rem;
   --text-2xl: 2.5rem;
   --radius: 0.5rem;
+  --radius-sm: 0.25rem;
   --font: ui-sans-serif, system-ui, sans-serif;
 }
 * {
@@ -132,7 +137,7 @@ h3 {
   cursor: pointer;
 }
 .button.primary {
-  color: white;
+  color: var(--on-accent);
   background: var(--accent);
 }
 .button.primary:hover {
@@ -171,11 +176,11 @@ select {
   width: fit-content;
   margin-bottom: var(--space-2);
   padding: var(--space-1) var(--space-2);
-  border-radius: 0.25rem;
+  border-radius: var(--radius-sm);
 }
 .status.pass {
   color: var(--pass);
-  background: #e7f1eb;
+  background: var(--pass-bg);
 }
 .status.check {
   color: var(--check);
@@ -212,7 +217,7 @@ select {
 .meter {
   overflow: hidden;
   height: var(--space-2);
-  background: #d7dbd5;
+  background: var(--meter-track);
   border-radius: var(--radius);
 }
 .meter span {
@@ -255,14 +260,14 @@ footer {
   left: var(--space-4);
   z-index: 1;
   padding: var(--space-2);
-  color: white;
+  color: var(--on-accent);
   background: var(--accent);
 }
 .skip-link:focus {
   top: var(--space-2);
 }
 :focus-visible {
-  outline: 3px solid #c5771b;
+  outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
 .design-system {
@@ -289,16 +294,29 @@ footer {
   background: var(--surface);
 }
 .swatch.ink {
-  color: white;
+  color: var(--on-accent);
   background: var(--ink);
 }
 .swatch.accent {
-  color: white;
+  color: var(--on-accent);
   background: var(--accent);
 }
 .swatch.warning {
-  color: white;
+  color: var(--on-accent);
   background: var(--check);
+}
+.swatch.pass {
+  background: var(--pass-bg);
+}
+.swatch.meter-track {
+  background: var(--meter-track);
+}
+.swatch.focus {
+  color: var(--on-accent);
+  background: var(--focus);
+}
+.swatch.on-accent {
+  background: var(--on-accent);
 }
 .design-system .button + .button {
   margin-left: var(--space-3);

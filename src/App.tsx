@@ -9,10 +9,19 @@ import {
 } from "./core/checks";
 import type { Verdict } from "./core/model";
 import { deriveVerdict } from "./core/verdict";
-import { discardPlayback, initialFlow, transition, type FlowEvent, type FlowState } from "./flow";
+import {
+  discardPlayback,
+  initialFlow,
+  permissionEvent,
+  transition,
+  type FlowEvent,
+  type FlowState,
+} from "./flow";
 import styles from "./styles.css";
 
 const engine = createAudioEngine();
+const METER_GAIN = 500;
+const PERCENT_SCALE = 100;
 void styles;
 
 export function App() {
@@ -56,11 +65,11 @@ export function App() {
     } catch (caught) {
       const message =
         caught instanceof Error ? caught.message : "Microphone permission was not granted.";
-      if (/dismiss|abort/i.test(message)) move("dismissed");
-      else {
+      const event = permissionEvent(caught);
+      if (event === "denied") {
         setError(message);
-        move("denied");
       }
+      move(event);
     }
   }
 
@@ -290,6 +299,9 @@ function VerdictCard({
   onReset: () => void;
 }) {
   const highlights = verdict.results.filter((result) => result.status !== "pass");
+  const browserProcessingActive = verdict.results.some(
+    (result) => result.id === "browser-processing" && result.status === "info",
+  );
   return (
     <>
       <p className={`status ${verdict.status.toLowerCase()}`}>{verdict.status}</p>
@@ -299,25 +311,31 @@ function VerdictCard({
           : "Review your microphone setup."}
       </h2>
       <div className="findings">
-        {(highlights.length
-          ? highlights
-          : verdict.results.filter((result) => result.id === "low-level")
-        ).map((result) => (
-          <div key={result.id}>
-            <strong>{result.label}</strong>
-            <p>{result.reason}</p>
-            {result.status === "check" && <p className="action">Next: {result.nextAction}</p>}
+        {highlights.length ? (
+          highlights.map((result) => (
+            <div key={result.id}>
+              <strong>{result.label}</strong>
+              <p>{result.reason}</p>
+              {result.status === "check" && <p className="action">Next: {result.nextAction}</p>}
+            </div>
+          ))
+        ) : (
+          <div>
+            <strong>All checks passed</strong>
+            <p>Your input, speaking level, clipping, and quiet-period noise passed this check.</p>
           </div>
-        ))}
+        )}
       </div>
       <div className="evidence">
         <h3>Supporting evidence</h3>
         <Level level={level} showClipping />
       </div>
-      <p className="notice">
-        Meeting apps may process audio differently. This check reports whether your browser could
-        turn off its own input processing.
-      </p>
+      {browserProcessingActive && (
+        <p className="notice">
+          Meeting apps may process audio differently. This check reports whether your browser could
+          turn off its own input processing.
+        </p>
+      )}
       <Playback
         url={playbackUrl}
         recording={recording}
@@ -333,10 +351,18 @@ function VerdictCard({
 }
 
 function Level({ level, showClipping }: { level: LiveLevel; showClipping: boolean }) {
+  const meterValue = Math.min(level.rms * METER_GAIN, PERCENT_SCALE);
   return (
     <div className="level">
-      <div className="meter" aria-label={`Live input level ${Math.round(level.rms * 100)} percent`}>
-        <span style={{ "--level": `${Math.min(level.rms * 500, 100)}%` } as React.CSSProperties} />
+      <div
+        className="meter"
+        role="meter"
+        aria-label="Live input level"
+        aria-valuemin={0}
+        aria-valuemax={PERCENT_SCALE}
+        aria-valuenow={Math.round(meterValue)}
+      >
+        <span style={{ "--level": `${meterValue}%` } as React.CSSProperties} />
       </div>
       <span>Input level</span>
       {showClipping && (
@@ -421,6 +447,10 @@ function DesignSystem() {
             <span className="swatch ink">Ink</span>
             <span className="swatch accent">Accent</span>
             <span className="swatch warning">Check</span>
+            <span className="swatch pass">Pass background</span>
+            <span className="swatch meter-track">Meter track</span>
+            <span className="swatch focus">Focus</span>
+            <span className="swatch on-accent">On accent</span>
           </div>
         </section>
         <section>
