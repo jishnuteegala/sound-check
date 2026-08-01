@@ -1,0 +1,95 @@
+name: Release Please
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      recover_tag:
+        description: Existing draft release tag to rebuild and publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@8b8fd2cc23b2e18957157a9d923d75aa0c6f6ad5 # v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  publish:
+    needs: release-please
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.release-please.outputs.release_created == 'true') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.recover_tag || needs.release-please.outputs.tag_name }}
+    steps:
+      - name: Validate tag
+        run: |
+          TAG_NAME="$TAG_NAME" python -X utf8 -c 'import os, re; tag=os.environ["TAG_NAME"]; pattern=r"^v(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9][0-9]*|[0-9]*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$"; assert re.fullmatch(pattern, tag), f"Invalid semantic version tag: {tag}"'
+      - name: Check out release tooling
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: main
+          path: tooling
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check out released source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.TAG_NAME }}
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify draft release belongs to main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git -C tooling fetch origin "refs/tags/$TAG_NAME:refs/tags/$TAG_NAME"
+          git -C tooling merge-base --is-ancestor "$TAG_NAME" origin/main
+          test "$(gh release view "$TAG_NAME" --json isDraft --jq .isDraft)" = true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        with:
+          version: 10.34.4
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: source/pnpm-lock.yaml
+      - name: Build static release
+        working-directory: source
+        run: pnpm install --frozen-lockfile && pnpm run check && pnpm run build
+      - name: Package reproducible distribution
+        run: |
+          export SOURCE_DATE_EPOCH="$(git -C tooling show -s --format=%ct "$TAG_NAME")"
+          python -X utf8 tooling/scripts/package_release.py "${TAG_NAME#v}" source artifact
+          (cd artifact && sha256sum --check SHA256SUMS)
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$TAG_NAME" artifact/* --clobber
+      - name: Publish complete release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$TAG_NAME" --draft=false

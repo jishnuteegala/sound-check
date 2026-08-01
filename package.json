@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "verify:preview": "node scripts/verify_preview.mjs",
     "lint": "oxlint .",
     "format": "oxfmt --check .",
     "format:write": "oxfmt .",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "check": "pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test"
+    "check:llms": "node scripts/check_llms.mjs",
+    "check": "pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test && pnpm run check:llms"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",
