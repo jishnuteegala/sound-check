@@ -618,8 +618,8 @@ function DesignSystem() {
       <main id="tokens" className="design-system">
         <h1>Design system</h1>
         <p className="lede">
-          Every value on this site flows from the tokens below, listed from a single typed source so
-          the gallery cannot drift. Nothing is set by hand.
+          Every value on this site flows from the tokens below, listed from a single typed source
+          that a test holds in lockstep with the stylesheet. Nothing is set by hand.
         </p>
         <section className="ds-section">
           <h2>Colour</h2>

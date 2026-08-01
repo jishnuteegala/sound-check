@@ -69,6 +69,8 @@
   --focus-ring-width: 3px;
   --focus-ring-offset: 2px;
   --press-offset: 1px;
+  --disabled-opacity: 0.6;
+  --skip-link-offset: -150%;
 
   --duration-fast: 120ms;
   --duration: 200ms;
@@ -286,7 +288,7 @@ h3 {
 }
 .button:disabled {
   cursor: wait;
-  opacity: 0.6;
+  opacity: var(--disabled-opacity);
   transform: none;
 }
 .button.block {
@@ -501,7 +503,7 @@ footer a:hover {
   color: var(--on-accent);
   background: var(--accent);
   text-decoration: none;
-  transform: translateY(-150%);
+  transform: translateY(var(--skip-link-offset));
   transition: transform var(--duration-fast) var(--ease-out);
 }
 .skip-link:focus {

@@ -77,6 +77,8 @@ export const controlTokens: string[] = [
   "--focus-ring-width",
   "--focus-ring-offset",
   "--press-offset",
+  "--disabled-opacity",
+  "--skip-link-offset",
 ];
 
 export const motionTokens: string[] = [
