@@ -1,31 +1,49 @@
 import { readFile } from "node:fs/promises";
 import { spawn } from "node:child_process";
 
-const port = "4174";
 const preview = spawn(
   process.execPath,
-  ["node_modules/vite/bin/vite.js", "preview", "--host", "127.0.0.1", "--port", port],
-  { stdio: "ignore" },
+  ["node_modules/vite/bin/vite.js", "preview", "--host", "127.0.0.1"],
+  { stdio: ["ignore", "pipe", "inherit"] },
 );
+const exited = new Promise((resolve) => {
+  preview.once("close", resolve);
+  preview.once("error", resolve);
+});
 
 try {
-  async function fetchPreview(attempt = 0) {
-    try {
-      return await fetch(`http://127.0.0.1:${port}/`);
-    } catch {
-      if (attempt === 39) return undefined;
-      await new Promise((resolve) => setTimeout(resolve, 250));
-      return fetchPreview(attempt + 1);
-    }
-  }
+  const origin = await new Promise((resolve, reject) => {
+    let out = "";
+    const watchdog = setTimeout(
+      () => reject(new Error("vite preview did not report its address")),
+      15000,
+    );
+    preview.stdout.on("data", (chunk) => {
+      out += chunk;
+      // oxlint-disable-next-line no-control-regex
+      const plain = out.replace(/\u001b\[[0-9;]*m/g, "");
+      const url = plain.match(/http:\/\/127\.0\.0\.1:\d+\//)?.[0];
+      if (url) {
+        clearTimeout(watchdog);
+        resolve(url);
+      }
+    });
+    preview.once("exit", (code) => {
+      clearTimeout(watchdog);
+      reject(new Error(`vite preview exited with code ${code}`));
+    });
+    preview.once("error", (error) => {
+      clearTimeout(watchdog);
+      reject(error);
+    });
+  });
 
-  const response = await fetchPreview();
-
-  if (!response?.ok) {
+  const response = await fetch(origin);
+  if (!response.ok) {
     throw new Error("Vite preview did not serve the built app");
   }
 
-  const llmsResponse = await fetch(`http://127.0.0.1:${port}/llms.txt`);
+  const llmsResponse = await fetch(new URL("llms.txt", origin));
   if (!llmsResponse.ok) {
     throw new Error("Vite preview did not serve /llms.txt");
   }
@@ -37,7 +55,7 @@ try {
   ]);
   const csp = headers.match(/Content-Security-Policy: (.+)/)?.[1];
 
-  if (!csp?.includes("default-src 'self'") || !csp.includes("script-src 'self'")) {
+  if (!/default-src 'self'\s*;/.test(csp ?? "") || !/script-src 'self'\s*;/.test(csp ?? "")) {
     throw new Error("dist/_headers does not contain the required strict CSP");
   }
 
@@ -48,7 +66,9 @@ try {
   if (llms !== (await readFile("llms.txt", "utf8"))) {
     throw new Error("The built /llms.txt differs from the repository copy");
   }
+
+  console.log(`Preview check passed at ${origin}`);
 } finally {
   preview.kill();
-  await new Promise((resolve) => preview.once("exit", resolve));
+  await exited;
 }

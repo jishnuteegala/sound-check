@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createAudioEngine, type AudioDevice, type LiveLevel } from "./audio/engine";
 import { createFakeEngine } from "./audio/fake-engine";
 import {
@@ -35,10 +35,21 @@ import {
 } from "./tokens";
 import "./styles.css";
 
-const fakeScenario = import.meta.env.DEV ? new URLSearchParams(location.search).get("fake") : null;
+const fakeScenario = import.meta.env.DEV
+  ? new URLSearchParams(window.location.search).get("fake")
+  : null;
 const engine = fakeScenario !== null ? createFakeEngine(fakeScenario) : createAudioEngine();
 const METER_GAIN = 500;
 const PERCENT_SCALE = 100;
+
+function subscribeHash(onChange: () => void): () => void {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+}
+
+function readHash(): string {
+  return window.location.hash;
+}
 
 export function App() {
   const [flow, setFlow] = useState<FlowState>(initialFlow);
@@ -82,7 +93,7 @@ export function App() {
       const message =
         caught instanceof Error ? caught.message : "Microphone permission was not granted.";
       const event = permissionEvent(caught);
-      if (event === "denied") {
+      if (event !== "dismissed") {
         setError(message);
       }
       move(event);
@@ -135,22 +146,35 @@ export function App() {
     move("reset");
   }
 
-  if (location.hash === "#/design-system") return <DesignSystem />;
+  const hash = useSyncExternalStore(subscribeHash, readHash);
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [hash]);
+  if (hash === "#/design-system") return <DesignSystem />;
 
   return (
     <div className="site-shell">
-      <a className="skip-link" href="#main-content">
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("main-content")?.focus();
+        }}
+      >
         Skip to check
       </a>
       <header className="masthead">
         <a className="wordmark" href="#/">
           Sound Check
         </a>
-        <a className="quiet-link" href="#/design-system">
-          Design system
-        </a>
+        {flow.screen !== "guiding" && !recording && (
+          <a className="quiet-link" href="#/design-system">
+            Design system
+          </a>
+        )}
       </header>
-      <main id="main-content" className="check-layout">
+      <main id="main-content" tabIndex={-1} className="check-layout">
         <section className="intro" aria-labelledby="page-title">
           <h1 id="page-title">Know your microphone before the call starts.</h1>
           <p className="lede">
@@ -158,8 +182,8 @@ export function App() {
           </p>
           <div className="intro-notes">
             <aside className="disclaimer">
-              <strong>Before your meeting:</strong> a PASS here cannot guarantee Zoom, Meet, or
-              Teams. Those apps may apply their own processing.
+              <strong>Before your meeting:</strong> a PASS here does not guarantee the call. Zoom,
+              Meet, and Teams may apply their own processing.
             </aside>
             <p className="retention">
               <strong>Zero retention.</strong> Audio stays in this browser and is never uploaded or
@@ -184,7 +208,6 @@ export function App() {
           {flow.screen === "verdict" && verdict && (
             <VerdictCard
               verdict={verdict}
-              level={level}
               playbackUrl={playbackUrl}
               recording={recording}
               error={error}
@@ -219,7 +242,7 @@ function Pending() {
     <>
       <p className="step">Step 1 of 3</p>
       <h2>Allow microphone access</h2>
-      <p>Choose “Allow” in your browser prompt. We will show available inputs next.</p>
+      <p>Choose "Allow" in your browser prompt. We will show available inputs next.</p>
     </>
   );
 }
@@ -229,8 +252,8 @@ function Blocked({ error, onReturn }: { error: string; onReturn: () => void }) {
     <>
       <h2>We could not access your microphone.</h2>
       <p>
-        {error || "Microphone access was blocked."} Re-enable it from this site’s permissions in
-        your browser settings, then try again.
+        {error || "Microphone access was blocked."} Check that a microphone is connected and that
+        this site has permission to use it, then try again.
       </p>
       <div className="panel-actions">
         <button className="button primary block" type="button" onClick={onReturn}>
@@ -276,7 +299,7 @@ function DevicePick({
           </select>
         </label>
       )}
-      <p>Each result runs a new quiet period followed by a speaking period.</p>
+      <p>Each check runs a fresh quiet period followed by a speaking period.</p>
       {error && (
         <p className="error" role="alert">
           {error}
@@ -312,7 +335,6 @@ function Guidance({ phase, level }: { phase: "quiet" | "speak"; level: LiveLevel
 
 function VerdictCard({
   verdict,
-  level,
   playbackUrl,
   recording,
   error,
@@ -321,7 +343,6 @@ function VerdictCard({
   onReset,
 }: {
   verdict: Verdict;
-  level: LiveLevel;
   playbackUrl?: string;
   recording: boolean;
   error: string;
@@ -333,6 +354,12 @@ function VerdictCard({
   const browserProcessingActive = verdict.results.some(
     (result) => result.id === "browser-processing" && result.status === "info",
   );
+  const speakMeasured = verdict.results.find((result) => result.id === "low-level")?.measured;
+  const evidence: LiveLevel = {
+    rms: Number(speakMeasured?.speakRms ?? 0),
+    peak: Number(speakMeasured?.speakPeak ?? 0),
+    clipping: verdict.results.find((result) => result.id === "clipping")?.status === "check",
+  };
   return (
     <>
       <div className="verdict-head">
@@ -361,7 +388,7 @@ function VerdictCard({
       </div>
       <div className="evidence">
         <span className="evidence-label">Supporting evidence</span>
-        <Level level={level} showClipping />
+        <Level level={evidence} showClipping />
       </div>
       {browserProcessingActive && (
         <p className="notice">
@@ -377,7 +404,12 @@ function VerdictCard({
         onDiscard={onDiscard}
       />
       <div className="panel-actions">
-        <button className="button primary block" type="button" onClick={onReset}>
+        <button
+          className="button primary block"
+          type="button"
+          onClick={onReset}
+          disabled={recording}
+        >
           Check again
         </button>
       </div>
@@ -389,7 +421,14 @@ function Level({ level, showClipping }: { level: LiveLevel; showClipping: boolea
   const meterValue = Math.min(level.rms * METER_GAIN, PERCENT_SCALE);
   return (
     <div className="level">
-      <div className="meter" aria-hidden="true">
+      <div
+        className="meter"
+        role="meter"
+        aria-label="Input level"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(meterValue)}
+      >
         <span style={{ "--level": `${meterValue}%` } as React.CSSProperties} />
       </div>
       <div className="level-row">
@@ -431,8 +470,8 @@ function Playback({
   return (
     <div className="playback">
       <p>
-        Optional: make a local recording of up to 10 seconds to hear this input. It stays in memory
-        only.
+        Optional: record up to 10 seconds to hear what the microphone captured. The recording stays
+        in memory only.
       </p>
       {error && (
         <p className="error" role="alert">
@@ -468,7 +507,7 @@ function TokenValue({ read, token }: { read: (token: string) => string; token: s
   return (
     <span className="ds-token">
       <code>{token}</code>
-      <span className="ds-value">{read(token) || "—"}</span>
+      <span className="ds-value">{read(token) || "unset"}</span>
     </span>
   );
 }
@@ -604,7 +643,14 @@ function DesignSystem() {
   const read = useTokenValues();
   return (
     <div className="site-shell">
-      <a className="skip-link" href="#tokens">
+      <a
+        className="skip-link"
+        href="#tokens"
+        onClick={(event) => {
+          event.preventDefault();
+          document.getElementById("tokens")?.focus();
+        }}
+      >
         Skip to tokens
       </a>
       <header className="masthead">
@@ -615,7 +661,7 @@ function DesignSystem() {
           Back to check
         </a>
       </header>
-      <main id="tokens" className="design-system">
+      <main id="tokens" tabIndex={-1} className="design-system">
         <h1>Design system</h1>
         <p className="lede">
           Every value on this site flows from the tokens below, listed from a single typed source
@@ -718,8 +764,8 @@ function DesignSystem() {
           <h2>Disclaimer &amp; retention</h2>
           <div className="intro-notes">
             <aside className="disclaimer">
-              <strong>Before your meeting:</strong> a PASS here cannot guarantee Zoom, Meet, or
-              Teams. Those apps may apply their own processing.
+              <strong>Before your meeting:</strong> a PASS here does not guarantee the call. Zoom,
+              Meet, and Teams may apply their own processing.
             </aside>
             <p className="retention">
               <strong>Zero retention.</strong> Audio stays in this browser and is never uploaded or
@@ -733,7 +779,9 @@ function DesignSystem() {
             <div className="finding check">
               <strong>Clipping</strong>
               <p>Your microphone signal is clipping.</p>
-              <p className="action">Next: Lower microphone gain or move farther away.</p>
+              <p className="action">
+                Next: Lower microphone gain or move farther from the microphone.
+              </p>
             </div>
             <div className="finding info">
               <strong>Browser processing</strong>
@@ -755,11 +803,14 @@ function DesignSystem() {
             <div className="check-panel">
               <p className="step">Step 1 of 3</p>
               <h2>Allow microphone access</h2>
-              <p>Choose “Allow” in your browser prompt. We will show available inputs next.</p>
+              <p>Choose "Allow" in your browser prompt. We will show available inputs next.</p>
             </div>
             <div className="check-panel">
               <h2>We could not access your microphone.</h2>
-              <p>Re-enable it from this site’s permissions in your browser settings, then retry.</p>
+              <p>
+                Microphone access was blocked. Check that a microphone is connected and that this
+                site has permission to use it, then try again.
+              </p>
             </div>
           </div>
         </section>
@@ -767,8 +818,8 @@ function DesignSystem() {
           <h2>Playback controls</h2>
           <div className="playback">
             <p>
-              Optional: make a local recording of up to 10 seconds to hear this input. It stays in
-              memory only.
+              Optional: record up to 10 seconds to hear what the microphone captured. The recording
+              stays in memory only.
             </p>
             <button className="button secondary" type="button">
               Record up to 10 seconds

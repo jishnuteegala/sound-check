@@ -42,7 +42,8 @@ export function checkClipping(speak: PhaseMeasurement): CheckResult {
 }
 
 export function checkNoisyQuiet(quiet: PhaseMeasurement, speak: PhaseMeasurement): CheckResult {
-  const ratio = speak.rms === 0 ? 1 : quiet.rms / speak.rms;
+  // A dead speaking phase cannot support a noise comparison; the dead-input check reports it.
+  const ratio = speak.rms <= thresholds.deadRms ? 0 : quiet.rms / speak.rms;
   const noisy = ratio >= thresholds.noisyQuietRatio;
   const unusable = ratio >= thresholds.noisyQuietUnusableRatio;
   return result(

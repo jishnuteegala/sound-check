@@ -16,7 +16,6 @@ export const colorTokens: string[] = [
   "--accent-hover",
   "--accent-soft",
   "--on-accent",
-  "--check",
   "--check-ink",
   "--check-bg",
   "--check-line",
