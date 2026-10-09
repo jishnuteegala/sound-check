@@ -85,7 +85,6 @@ export function createFakeEngine(raw: string | null): AudioEngine {
         const measurement = scenario[phase];
         const level: LiveLevel = {
           rms: measurement.rms,
-          peak: measurement.peak,
           clipping: phase === "speak" && scenario.liveClipping,
         };
         callbacks?.onLiveLevel?.(level);
