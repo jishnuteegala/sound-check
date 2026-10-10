@@ -29,6 +29,22 @@ describe("microphone check flow", () => {
       initialFlow,
     );
   });
+
+  it("returns to idle when Chromium reports a dismissed prompt as NotAllowedError", () => {
+    const error = new Error("Permission dismissed");
+    error.name = "NotAllowedError";
+    expect(transition(transition(initialFlow, "request"), permissionEvent(error))).toEqual(
+      initialFlow,
+    );
+  });
+
+  it("shows an explanatory state when no microphone exists or the device fails", () => {
+    const error = new Error("Requested device not found.");
+    error.name = "NotFoundError";
+    const blocked = transition(transition(initialFlow, "request"), permissionEvent(error));
+    expect(blocked.screen).toBe("blocked");
+    expect(transition(blocked, "reset").screen).toBe("idle");
+  });
 });
 
 describe("playback discard", () => {

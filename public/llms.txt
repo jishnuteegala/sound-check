@@ -12,7 +12,8 @@ Sound Check is a single interactive browser page for checking whether a micropho
 ## Product facts
 
 - A result is PASS when every measurement is within the conservative operating range.
-- A result is CHECK when input is absent, too quiet, clipping, too noisy, or affected by browser processing.
+- A result is CHECK when input is absent or too quiet, the signal clips, or quiet-period noise is unusable.
+- Noticeable-but-usable room noise and active browser processing are reported as informational findings under a PASS, not as failures.
 - Audio is processed entirely in the browser. It is never uploaded, stored, or retained by the site.
 - The app uses no accounts, analytics, cookies, advertising, forms, or third-party requests.
 - Modern desktop and mobile browsers with `getUserMedia`, Web Audio, and MediaRecorder support can run the check.

@@ -9,17 +9,16 @@ export interface AudioDevice {
 
 export interface LiveLevel {
   rms: number;
-  peak: number;
   clipping: boolean;
 }
 
-export interface AudioPlatform {
+interface AudioPlatform {
   getUserMedia(constraints: MediaStreamConstraints): Promise<MediaStream>;
   enumerateDevices(): Promise<MediaDeviceInfo[]>;
   createContext(): AudioContext;
 }
 
-export interface PhaseSampler {
+interface PhaseSampler {
   sample(durationMs: number): Promise<Float32Array>;
   subscribe(listener: (level: LiveLevel) => void): () => void;
   close(): void;
@@ -38,13 +37,8 @@ export interface CaptureCallbacks {
   onPhase?: (phase: "quiet" | "speak") => void;
 }
 
-export function createAudioEngine(
-  platform: AudioPlatform = browserPlatform(),
-  samplerFactory: (
-    context: AudioContext,
-    stream: MediaStream,
-  ) => PhaseSampler = createAnalyserSampler,
-): AudioEngine {
+export function createAudioEngine(): AudioEngine {
+  const platform: AudioPlatform = browserPlatform();
   let stream: MediaStream | undefined;
   let context: AudioContext | undefined;
   let sampler: PhaseSampler | undefined;
@@ -73,7 +67,7 @@ export function createAudioEngine(
       echoCancellation: settings.echoCancellation === true,
     };
     context = platform.createContext();
-    sampler = samplerFactory(context, stream);
+    sampler = createAnalyserSampler(context, stream);
   }
 
   return {
@@ -135,7 +129,7 @@ export function createAudioEngine(
   }
 }
 
-export function createAnalyserSampler(context: AudioContext, stream: MediaStream): PhaseSampler {
+function createAnalyserSampler(context: AudioContext, stream: MediaStream): PhaseSampler {
   const source = context.createMediaStreamSource(stream);
   const analyser = context.createAnalyser();
   analyser.fftSize = 2048;
@@ -171,7 +165,6 @@ export function createAnalyserSampler(context: AudioContext, stream: MediaStream
         const measurement: PhaseMeasurement = measureSamples(buffer);
         listener({
           rms: measurement.rms,
-          peak: measurement.peak,
           clipping: measurement.clipCount > 0,
         });
         subscriptionFrame = window.requestAnimationFrame(update);

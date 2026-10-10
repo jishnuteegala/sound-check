@@ -83,6 +83,14 @@ describe("check runners", () => {
     expect(checkNoisyQuiet(phase(0.8), phase(1)).status).toBe("check");
     expect(checkNoisyQuiet(phase(0.81), phase(1)).status).toBe("check");
   });
+
+  it("does not stack a noise failure on dead input", () => {
+    expect(checkNoisyQuiet(phase(0.05), phase(0)).status).toBe("pass");
+    expect(checkNoisyQuiet(phase(0.05), phase(thresholds.deadRms)).status).toBe("pass");
+    expect(checkNoisyQuiet(phase(0.05), phase(thresholds.deadRms + 0.0001)).status).not.toBe(
+      "pass",
+    );
+  });
 });
 
 describe("measureSamples", () => {

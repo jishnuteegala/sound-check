@@ -14,21 +14,22 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "check:llms": "node scripts/check_llms.mjs",
+    "check:privacy": "node scripts/check_privacy.mjs",
     "check": "pnpm run lint && pnpm run format && pnpm run typecheck && pnpm run test && pnpm run check:llms"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "latest",
-    "react": "latest",
-    "react-dom": "latest",
-    "vite": "latest"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2",
+    "@types/node": "26.1.2",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
     "oxfmt": "0.61.0",
     "oxlint": "1.76.0",
     "typescript": "7.0.2",
+    "vite": "8.2.0",
     "vitest": "4.1.10"
   },
   "engines": {

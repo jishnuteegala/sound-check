@@ -16,7 +16,10 @@ Start the check, allow microphone access, choose an input when the browser expos
 - Room noise while you are quiet.
 - Browser-provided processing signals.
 
-PASS means each measurement is within the tool's conservative operating range. CHECK means one or more measurements need attention: no input, a quiet signal, clipping, excessive room noise, or browser processing. A PASS does not guarantee that a meeting app will not apply its own processing or have its own device setting.
+PASS means each measurement is within the tool's conservative operating range.
+CHECK means a measurement needs attention: no input, a quiet signal, clipping, or unusable room noise.
+Noticeable-but-usable room noise and active browser processing are reported as informational findings under a PASS, not as failures.
+A PASS does not guarantee that a meeting app will not apply its own processing or have its own device setting.
 
 Audio is processed entirely in the browser. It is never uploaded, stored, or retained by the site. Sound Check uses no analytics, cookies, accounts, advertising, forms, or third-party requests.
 
@@ -45,11 +48,16 @@ pnpm run verify:preview
 | `pnpm run format`         | Checks formatting with oxfmt.                                              |
 | `pnpm run typecheck`      | Type-checks without emitting files.                                        |
 | `pnpm run test`           | Runs the test suite.                                                       |
+| `pnpm run check:llms`     | Verifies `llms.txt` and `public/llms.txt` stay identical.                  |
+| `pnpm run check:privacy`  | Scans the built `dist/` bundle for off-origin requests and header gaps.    |
 | `pnpm run check`          | Runs lint, format, typecheck, tests, and the `llms.txt` consistency check. |
+
+In development, `pnpm dev` accepts a `?fake=` query parameter that replaces the real audio engine with scripted scenarios: `?fake=pass` produces a PASS verdict, `?fake=check` produces a CHECK verdict with a clipping failure and informational noise and processing findings, and `?fake=deny` simulates the browser denying microphone permission.
+`/#/design-system` renders the token and component reference page.
 
 ## Agents and scripts
 
-The app has no server-side audio processing. Agents can run `pnpm run check` for the full quality gate and `pnpm run verify:preview` after a build to exercise the generated static bundle without leaving a server running. `scripts/package_release.py` creates stable zip and tarball release archives using the release tag commit time. `llms.txt` and `public/llms.txt` are intentionally identical; `pnpm run check:llms` verifies that contract.
+The app has no server-side audio processing. Agents can run `pnpm run check` for the pre-build quality gate and `pnpm run verify:preview` after a build to exercise the generated static bundle without leaving a server running. `scripts/package_release.py` creates stable zip and tarball release archives using the release tag commit time. `llms.txt` and `public/llms.txt` are intentionally identical; `pnpm run check:llms` verifies that contract. `pnpm run check:privacy` requires a prior `pnpm run build` and asserts the bundle contains no third-party requests, matching the privacy claims made on this page.
 
 ## Deployment
 
@@ -113,8 +121,15 @@ server {
     add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
     add_header Referrer-Policy "no-referrer" always;
     add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
     add_header Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=(), usb=()" always;
     location /assets/ {
+        # add_header is not inherited into a location that defines its own.
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+        add_header Referrer-Policy "no-referrer" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=(), usb=()" always;
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
 }
@@ -131,8 +146,11 @@ sound-check.example.com {
         Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
         Referrer-Policy "no-referrer"
         X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
         Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=(), usb=()"
     }
+    @assets path /assets/*
+    header @assets Cache-Control "public, max-age=31536000, immutable"
     file_server
 }
 ```
@@ -155,8 +173,15 @@ server {
     add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
     add_header Referrer-Policy "no-referrer" always;
     add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
     add_header Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=(), usb=()" always;
     location /assets/ {
+        # add_header is not inherited into a location that defines its own.
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+        add_header Referrer-Policy "no-referrer" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Permissions-Policy "camera=(), geolocation=(), microphone=(self), payment=(), usb=()" always;
         add_header Cache-Control "public, max-age=31536000, immutable";
     }
 }

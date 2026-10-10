@@ -45,7 +45,12 @@ const WINDOW_MS = 350;
 
 function parseScenario(raw: string | null): FakeScenario {
   if (raw === "deny") return { ...scenarios.pass, deny: true };
-  return scenarios[raw ?? ""] ?? scenarios.pass;
+  const scenario = Object.hasOwn(scenarios, raw ?? "") ? scenarios[raw ?? ""] : undefined;
+  if (!scenario) {
+    console.warn(`Unknown ?fake= scenario "${raw}". Expected pass, check, or deny. Using "pass".`);
+    return scenarios.pass;
+  }
+  return scenario;
 }
 
 export function createFakeEngine(raw: string | null): AudioEngine {
@@ -80,7 +85,6 @@ export function createFakeEngine(raw: string | null): AudioEngine {
         const measurement = scenario[phase];
         const level: LiveLevel = {
           rms: measurement.rms,
-          peak: measurement.peak,
           clipping: phase === "speak" && scenario.liveClipping,
         };
         callbacks?.onLiveLevel?.(level);

@@ -1,8 +1,3 @@
-export interface TokenGroup {
-  title: string;
-  tokens: string[];
-}
-
 export const colorTokens: string[] = [
   "--canvas",
   "--surface",
@@ -16,7 +11,6 @@ export const colorTokens: string[] = [
   "--accent-hover",
   "--accent-soft",
   "--on-accent",
-  "--check",
   "--check-ink",
   "--check-bg",
   "--check-line",

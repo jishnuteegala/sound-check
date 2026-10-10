@@ -20,5 +20,12 @@ jobs:
       os: '["ubuntu-latest", "macos-latest", "windows-latest"]'
       post-check: |
         pnpm run build
+        pnpm run check:privacy
+        test -f dist/index.html
+        test -f dist/llms.txt
+        test -f dist/_headers
+        test -f dist/favicon.svg
+        test -f dist/apple-touch-icon.png
+        pnpm run verify:preview
         SOURCE_DATE_EPOCH=315532800 python -X utf8 scripts/package_release.py snapshot
         (cd artifact && sha256sum --check SHA256SUMS)
