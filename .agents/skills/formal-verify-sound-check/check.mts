@@ -6,9 +6,16 @@ import type { FlowEvent, FlowState, Screen } from "../../../src/flow.ts";
 // reachability graph, and asserts the invariants listed in SKILL.md.
 // Any failure prints a counterexample and exits 1.
 
-const screens: Screen[] = ["idle", "permission", "devices", "guiding", "verdict", "blocked"];
+const screens = [
+  "idle",
+  "permission",
+  "devices",
+  "guiding",
+  "verdict",
+  "blocked",
+] as const satisfies readonly Screen[];
 const phases = ["quiet", "speak"] as const;
-const events: FlowEvent[] = [
+const events = [
   "request",
   "granted",
   "denied",
@@ -19,30 +26,26 @@ const events: FlowEvent[] = [
   "speak",
   "complete",
   "reset",
-];
+] as const satisfies readonly FlowEvent[];
 
 const states: FlowState[] = screens.flatMap((screen) => phases.map((phase) => ({ screen, phase })));
 
-const guarded = new Set([
-  "idle|request",
-  "permission|granted",
-  "permission|denied",
-  "permission|failed",
-  "permission|dismissed",
-  "devices|start",
-  "guiding|quiet",
-  "guiding|speak",
-  "guiding|complete",
-  "verdict|reset",
-  "blocked|reset",
-]);
+// Compile-time tripwires: tsc fails here if a union gains a member the lists
+// omit, or the lists name a member the union dropped. The check file is not in
+// any tsconfig - the typecheck command in SKILL.md is what makes these fire.
+const exhaustiveTripwire: [
+  Exclude<FlowEvent, (typeof events)[number]> extends never ? true : never,
+  Exclude<Screen, (typeof screens)[number]> extends never ? true : never,
+  Exclude<FlowState["phase"], (typeof phases)[number]> extends never ? true : never,
+] = [true, true, true];
+void exhaustiveTripwire;
 
 const expectedGuarded: [Screen, FlowEvent, (s: FlowState) => FlowState][] = [
   ["idle", "request", (s) => ({ ...s, screen: "permission" })],
   ["permission", "granted", (s) => ({ ...s, screen: "devices" })],
   ["permission", "denied", (s) => ({ ...s, screen: "blocked" })],
   ["permission", "failed", (s) => ({ ...s, screen: "blocked" })],
-  ["permission", "dismissed", () => initialFlow],
+  ["permission", "dismissed", () => ({ screen: "idle", phase: "quiet" })],
   ["devices", "start", () => ({ screen: "guiding", phase: "quiet" })],
   ["guiding", "quiet", (s) => ({ ...s, phase: "quiet" })],
   ["guiding", "speak", (s) => ({ ...s, phase: "speak" })],
@@ -51,15 +54,27 @@ const expectedGuarded: [Screen, FlowEvent, (s: FlowState) => FlowState][] = [
   ["blocked", "reset", (s) => ({ ...s, screen: "idle" })],
 ];
 
+const guarded = new Set(expectedGuarded.map(([screen, e]) => `${screen}|${e}`));
+
+// Shallow compare over every own field, not just screen/phase: a FlowState
+// that grows a field the check cannot see must still fail.
 function same(a: FlowState, b: FlowState): boolean {
-  return a.screen === b.screen && a.phase === b.phase;
+  const ea = Object.entries(a);
+  const eb = Object.fromEntries(Object.entries(b));
+  return ea.length === Object.keys(eb).length && ea.every(([k, v]) => Object.is(v, eb[k]));
 }
 function name(s: FlowState): string {
-  return `${s.screen}{${s.phase}}`;
+  const extra = Object.entries(s)
+    .filter(([k]) => k !== "screen" && k !== "phase")
+    .map(([k, v]) => `${k}:${JSON.stringify(v)}`)
+    .join(",");
+  return `${s.screen}{${s.phase}${extra ? `,${extra}` : ""}}`;
 }
 
 let failures = 0;
+let total = 0;
 function check(label: string, ok: boolean, counterexample = "") {
+  total++;
   if (ok) {
     console.log(`PASS ${label}`);
     return;
@@ -68,12 +83,24 @@ function check(label: string, ok: boolean, counterexample = "") {
   console.log(`FAIL ${label}${counterexample ? ` - ${counterexample}` : ""}`);
 }
 
+// I0 the app boots on idle{quiet}, not some other state.
+check(
+  "I0 initial state: initialFlow is {idle,quiet}",
+  same(initialFlow, { screen: "idle", phase: "quiet" }),
+  name(initialFlow),
+);
+
 // I1 totality: every pair returns a valid FlowState.
 const bad: string[] = [];
 for (const s of states)
   for (const e of events) {
     const out = transition(s, e);
-    if (!screens.includes(out.screen) || (out.phase !== "quiet" && out.phase !== "speak")) {
+    if (
+      out === null ||
+      out === undefined ||
+      !screens.some((sc) => sc === out.screen) ||
+      (out.phase !== "quiet" && out.phase !== "speak")
+    ) {
       bad.push(`${name(s)} --${e}--> ${JSON.stringify(out)}`);
     }
   }
@@ -83,13 +110,15 @@ check(
   bad[0],
 );
 
-// I2 no-op discipline: unguarded pairs return the input unchanged.
+// I2 no-op discipline: unguarded pairs return the input object itself.
+// Identity, not just value equality: a fresh {...state} defeats React's
+// Object.is bailout in App.tsx and re-renders on every ignored event.
 const noisy: string[] = [];
 for (const s of states)
   for (const e of events) {
     if (guarded.has(`${s.screen}|${e}`)) continue;
     const out = transition(s, e);
-    if (!same(out, s)) noisy.push(`${name(s)} --${e}--> ${name(out)}`);
+    if (out !== s) noisy.push(`${name(s)} --${e}--> ${name(out)}`);
   }
 check(
   "I2 no-op discipline: unguarded pairs return the input unchanged",
@@ -158,7 +187,7 @@ const leaks: string[] = [];
 for (const s of states)
   for (const e of events) {
     const out = transition(s, e);
-    if (same(out, s) || out.screen === s.screen) continue;
+    if (out.screen === s.screen) continue;
     if (out.screen === "guiding" && !(s.screen === "devices" && e === "start"))
       leaks.push(`${name(s)} --${e}--> guiding`);
     if (out.screen === "verdict" && !(s.screen === "guiding" && e === "complete"))
@@ -207,6 +236,7 @@ check(
 const err = (n: string, m = "") => Object.assign(new Error(m), { name: n });
 const permCases: Array<[unknown, string]> = [
   [42, "failed"],
+  [{ name: "NotAllowedError" }, "failed"], // non-Error object: not the Error path
   [err("AbortError"), "dismissed"],
   [err("NotAllowedError", "Permission dismissed"), "dismissed"],
   [err("NotAllowedError", "Permission denied"), "denied"],
@@ -222,7 +252,9 @@ check(
 );
 
 if (failures === 0) {
-  console.log(`\nALL ${9} INVARIANTS HOLD over 120 pairs, ${reachable.size} reachable states`);
+  console.log(
+    `\nALL ${total} INVARIANTS HOLD over ${screens.length * phases.length * events.length} pairs, ${reachable.size} reachable states`,
+  );
 } else {
   console.log(`\n${failures} invariant(s) FAILED`);
   process.exit(1);
