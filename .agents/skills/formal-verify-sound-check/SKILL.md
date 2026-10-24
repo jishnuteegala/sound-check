@@ -31,7 +31,7 @@ pnpm exec tsc --ignoreConfig --noEmit --strict --module nodenext --moduleResolut
 | ------------- | ---------------------------------------------- | ---------------------------------------- |
 | `src/flow.ts` | `transition`, `initialFlow`, `permissionEvent` | the whole machine + the error classifier |
 
-**Sync commit:** `df743fb` (2026-10-24). Move this forward only after re-running the check and confirming the invariants describe the code at the new commit.
+**Sync commit:** `df743fb` (2026-10-10). Move this forward only after re-running the check and confirming the invariants describe the code at the new commit.
 
 Not covered, on purpose: `discardPlayback` (side-effecting, unit-tested), `App.tsx`'s direct `setFlow` calls (a side channel that bypasses `transition` - e.g. the capture-failure path near App.tsx:110 - flag it in review if a change adds more), and all rendering.
 

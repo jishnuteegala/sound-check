@@ -61,7 +61,10 @@ const guarded = new Set(expectedGuarded.map(([screen, e]) => `${screen}|${e}`));
 function same(a: FlowState, b: FlowState): boolean {
   const ea = Object.entries(a);
   const eb = Object.fromEntries(Object.entries(b));
-  return ea.length === Object.keys(eb).length && ea.every(([k, v]) => Object.is(v, eb[k]));
+  return (
+    ea.length === Object.keys(eb).length &&
+    ea.every(([k, v]) => Object.hasOwn(eb, k) && Object.is(v, eb[k]))
+  );
 }
 function name(s: FlowState): string {
   const extra = Object.entries(s)
