@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.1.1](https://github.com/jishnuteegala/sound-check/compare/v0.1.0...v0.1.1) (2026-10-24)
+
+
+### Features
+
+* record docs, build, and ci commits in changelogs ([#19](https://github.com/jishnuteegala/sound-check/issues/19)) ([e3e1098](https://github.com/jishnuteegala/sound-check/commit/e3e1098d35977f56f1f093d224cbd4601190ce1a))
+
+
+### Bug Fixes
+
+* first-principles quality pass across released surfaces ([#23](https://github.com/jishnuteegala/sound-check/issues/23)) ([e214eef](https://github.com/jishnuteegala/sound-check/commit/e214eef62dbf8a56ed3c7160a3335a8e3ceacaaa))
+
+
+### Continuous Integration
+
+* use shared app-ci workflow ([#18](https://github.com/jishnuteegala/sound-check/issues/18)) ([230e990](https://github.com/jishnuteegala/sound-check/commit/230e9908bf22685e4af75a5dab646e5a94654e9d))
+* use shared release-please workflow ([#17](https://github.com/jishnuteegala/sound-check/issues/17)) ([9ec08ab](https://github.com/jishnuteegala/sound-check/commit/9ec08ab043bc502e96e129f4b0941e9c54fcd4ab))
+
 ## 0.1.0 (2026-08-03)
 
 
