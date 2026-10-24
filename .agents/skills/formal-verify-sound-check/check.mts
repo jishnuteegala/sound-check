@@ -37,19 +37,19 @@ const guarded = new Set([
   "blocked|reset",
 ]);
 
-const expectedGuarded: Record<string, (s: FlowState) => FlowState> = {
-  "idle|request": (s) => ({ ...s, screen: "permission" }),
-  "permission|granted": (s) => ({ ...s, screen: "devices" }),
-  "permission|denied": (s) => ({ ...s, screen: "blocked" }),
-  "permission|failed": (s) => ({ ...s, screen: "blocked" }),
-  "permission|dismissed": () => initialFlow,
-  "devices|start": () => ({ screen: "guiding", phase: "quiet" }),
-  "guiding|quiet": (s) => ({ ...s, phase: "quiet" }),
-  "guiding|speak": (s) => ({ ...s, phase: "speak" }),
-  "guiding|complete": (s) => ({ ...s, screen: "verdict" }),
-  "verdict|reset": (s) => ({ ...s, screen: "devices" }),
-  "blocked|reset": (s) => ({ ...s, screen: "idle" }),
-};
+const expectedGuarded: [Screen, FlowEvent, (s: FlowState) => FlowState][] = [
+  ["idle", "request", (s) => ({ ...s, screen: "permission" })],
+  ["permission", "granted", (s) => ({ ...s, screen: "devices" })],
+  ["permission", "denied", (s) => ({ ...s, screen: "blocked" })],
+  ["permission", "failed", (s) => ({ ...s, screen: "blocked" })],
+  ["permission", "dismissed", () => initialFlow],
+  ["devices", "start", () => ({ screen: "guiding", phase: "quiet" })],
+  ["guiding", "quiet", (s) => ({ ...s, phase: "quiet" })],
+  ["guiding", "speak", (s) => ({ ...s, phase: "speak" })],
+  ["guiding", "complete", (s) => ({ ...s, screen: "verdict" })],
+  ["verdict", "reset", (s) => ({ ...s, screen: "devices" })],
+  ["blocked", "reset", (s) => ({ ...s, screen: "idle" })],
+];
 
 function same(a: FlowState, b: FlowState): boolean {
   return a.screen === b.screen && a.phase === b.phase;
@@ -73,7 +73,7 @@ const bad: string[] = [];
 for (const s of states)
   for (const e of events) {
     const out = transition(s, e);
-    if (!screens.includes(out.screen) || !(phases as readonly string[]).includes(out.phase)) {
+    if (!screens.includes(out.screen) || (out.phase !== "quiet" && out.phase !== "speak")) {
       bad.push(`${name(s)} --${e}--> ${JSON.stringify(out)}`);
     }
   }
@@ -99,8 +99,7 @@ check(
 
 // I3 guarded transitions match the documented table.
 const wrong: string[] = [];
-for (const [key, want] of Object.entries(expectedGuarded)) {
-  const [screen, e] = key.split("|") as [Screen, FlowEvent];
+for (const [screen, e, want] of expectedGuarded) {
   for (const phase of phases) {
     const s = { screen, phase };
     const out = transition(s, e);
@@ -114,12 +113,12 @@ check("I3 guarded transitions produce the documented outputs", wrong.length === 
 const reachable = new Map<string, FlowState>();
 const queue: FlowState[] = [initialFlow];
 reachable.set(name(initialFlow), initialFlow);
-while (queue.length) {
-  const s = queue.shift()!;
+let cur: FlowState | undefined;
+while ((cur = queue.shift()) !== undefined) {
   for (const e of events) {
-    const out = transition(s, e);
+    const out = transition(cur, e);
     const k = name(out);
-    if (!same(out, s) && !reachable.has(k)) {
+    if (!same(out, cur) && !reachable.has(k)) {
       reachable.set(k, out);
       queue.push(out);
     }
@@ -182,8 +181,8 @@ check("I7 phase discipline: start always enters the quiet phase", phaseBad.lengt
 function reaches(states0: FlowState[], pred: (s: FlowState) => boolean): boolean {
   const seen = new Set(states0.map(name));
   const q = [...states0];
-  while (q.length) {
-    const s = q.shift()!;
+  let s: FlowState | undefined;
+  while ((s = q.shift()) !== undefined) {
     if (pred(s)) return true;
     for (const e of events) {
       const out = transition(s, e);
@@ -218,7 +217,7 @@ check(
   "I9 permissionEvent partition: non-Error/AbortError/dismiss-msg/NotAllowed/other",
   permBad.length === 0,
   permBad.map(
-    ([e, w]) => `${String((e as Error).name ?? e)} -> ${permissionEvent(e)} (want ${w})`,
+    ([e, w]) => `${e instanceof Error ? e.name : String(e)} -> ${permissionEvent(e)} (want ${w})`,
   )[0],
 );
 
