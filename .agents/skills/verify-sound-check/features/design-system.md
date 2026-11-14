@@ -26,7 +26,7 @@ Preconditions:
 - **Nav out.** From the check page, click `a.quiet-link` labeled `Design system`; the design-system heading appears without a reload and `location.hash === "#/design-system"`.
 - **Skip link.** `p.focus('a.skip-link')`, then `p.keyboard.press("Enter")`. `document.activeElement.id === "tokens"`, the design-system page is still visible, and the hash is unchanged - the skip link must not route.
 - **Back.** Click `a.quiet-link` labeled `Back to check`; the idle screen returns and `window.scrollY === 0`.
-- **Check skip.** `p.focus('a.skip-link')` then Enter on the check page: `document.activeElement.id === "main-content"` and the hash is unchanged (`#/` after navigating back).
+- **Check skip.** `p.focus('a.skip-link')` then Enter on the check page: `document.activeElement.id === "main-content"` and the hash is unchanged - `#/` when reached via `Back to check`, `""` on a fresh `/` or `/?fake=` load.
 - **Hidden during capture.** During `?fake=pass` guidance, `a.quiet-link` labeled `Design system` is absent from the masthead (the link hides while a check or recording is in flight).
 
 ## Gotchas
@@ -34,3 +34,5 @@ Preconditions:
 - The design-system skip link uses `href="#tokens"` with a preventDefault focus handler; a plain anchor jump would fire `hashchange` and eject the user back to the check page - assert the hash did not change.
 - Skip links are off-viewport until focused; `p.click` times out on them. Focus then press Enter.
 - React re-renders on `hashchange`; state persists across navigation, so scroll position must be asserted separately (`window.scrollY`).
+- Routing is exact-match: only `hash === "#/design-system"` renders the design-system page; `#/design-system/` or any other hash falls back to the check flow.
+- The design-system page renders specimens using real flow strings and selectors (`Speak normally`, `We could not access your microphone.`, `.status.pass`, `role="meter"`, `Record up to 10 seconds`, skip/quiet links). A `text=` wait that is meant to prove check-flow state will also match on `/#/design-system` - confirm `location.hash` or use flow-unique handles (`Check my microphone`, `Choose your input`, `Start microphone check`, `Stay quiet`, `Your microphone passed`, `Review your microphone setup`, `Back to start`, `Discard recording`, `Check again`).
