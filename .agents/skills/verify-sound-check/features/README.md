@@ -15,6 +15,8 @@ This directory is the maintained source for verifying Sound Check's user-facing 
 - Start every recipe from the baseline state unless its preconditions say otherwise.
 - Prefer semantic hooks (button text, `role="meter"`, the `a.skip-link` skip link) and route hashes over ad-hoc CSS selectors or tab order.
 - Fake scenario timings are ~350ms per phase; wait on the state text, never on a fixed sleep.
+- Only `pass|check|deny` are valid `?fake=` values; any other value (including a bare `?fake`) still activates the fake engine and falls back to `pass` with only a `console.warn`.
+- Text handles are unique per page, but the design-system route renders specimens with real flow strings - prefer flow-unique handles (`Check my microphone`, `Choose your input`, `Start microphone check`, `Stay quiet`, `Your microphone passed`, `Review your microphone setup`, `Back to start`, `Discard recording`, `Check again`) or assert `location.hash` alongside.
 - Run browser actions through Playwright (`p.click`, `p.waitForSelector`, `p.focus`, `p.keyboard.press`); run assertions against text, DOM state, and screenshots.
 - One known-benign console error: the playback shot logs `ERR_REQUEST_RANGE_NOT_SATISFIABLE` because the fake engine returns an empty `Blob`.
 
