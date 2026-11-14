@@ -24,8 +24,8 @@ Preconditions:
 
 - **Offer.** On the verdict screen, the button `Record up to 10 seconds` is enabled beside copy stating the recording stays in memory only.
 - **Record.** Click `Record up to 10 seconds` and wait for `text=Discard recording`. An `<audio controls>` element appears whose `src` starts with `blob:`.
-- **Retention.** Assert the page contains `in memory only` copy and that the fake flow issued no network requests beyond same-origin assets (dev-server traffic).
-- **Discard.** Click `Discard recording`; the audio element disappears and the offer button returns. `URL.revokeObjectURL` is called on the old blob URL (assertable via `page.exposeFunction` spy if the run needs it).
+- **Retention.** Assert the page contains `in memory only` copy and that the fake flow issued no network requests beyond same-origin assets (dev-server traffic). Run this assertion in the offer state (before recording or after discard): the offer copy unmounts while a recording exists. The footer also renders `Privacy` and `Source` external links on every screen - they fire no request on render (they navigate only if clicked), so the check is "no request leaves the origin", not "no external references".
+- **Discard.** Click `Discard recording`; the audio element disappears and the offer button returns. `URL.revokeObjectURL` is called on the old blob URL - one sufficient assertion is a post-load `page.evaluate` that wraps the native (`URL.revokeObjectURL = u => { (window.__revocations ??= []).push(u); return orig(u); }`) then reads `__revocations` back after the click; `page.exposeFunction` alone cannot intercept a native call.
 - **Disabled rerun.** While `recording` is true, `Check again` is disabled (`disabled={recording}` at `src/App.tsx`) - but the fake's `recordPlayback` resolves within a frame, so the window is not deterministically observable under `?fake=`. Assert it only when driving a real engine (the recording holds for up to 10s); under the fake the guard is source-verified, not driven.
 
 ## Gotchas
@@ -33,3 +33,5 @@ Preconditions:
 - The fake engine's `recordPlayback` returns an empty `Blob`; the `<audio>` element logs `ERR_REQUEST_RANGE_NOT_SATISFIABLE` on load. Expected here, and only here.
 - The real engine caps recording at ten seconds; the fake resolves immediately - do not assert a ten-second wait under `?fake=`.
 - A verdict-screen reset (`Check again`) must not fire while a recording is in flight; the disabled state is the regression to watch.
+- The record button shows `Recording...` (disabled) transiently during capture, and the whole offer also renders on the CHECK verdict - it is not PASS-only.
+- A failed `recordPlayback` renders a `role="alert"` error inside the offer block ("Playback capture could not start."); the fake never rejects, so this state is source-only.
