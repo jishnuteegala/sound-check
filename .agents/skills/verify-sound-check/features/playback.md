@@ -34,4 +34,4 @@ Preconditions:
 - The real engine caps recording at ten seconds; the fake resolves immediately - do not assert a ten-second wait under `?fake=`.
 - A verdict-screen reset (`Check again`) must not fire while a recording is in flight; the disabled state is the regression to watch.
 - The record button shows `Recording...` (disabled) transiently during capture, and the whole offer also renders on the CHECK verdict - it is not PASS-only.
-- A failed `recordPlayback` renders a `role="alert"` error inside the offer block ("Playback capture could not start."); the fake never rejects, so this state is source-only.
+- A failed `recordPlayback` renders a `role="alert"` error inside the offer block; the text is the caught message - "Playback capture is not available in this browser." when the engine cannot capture, "Playback capture could not start." on a `MediaRecorder` failure or a non-Error throw, or the browser's own message on a synchronous throw. The fake never rejects, so this state is source-only.
